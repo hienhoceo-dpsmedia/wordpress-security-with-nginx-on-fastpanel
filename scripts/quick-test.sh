@@ -48,8 +48,24 @@ echo
 # Quick tests - most critical security checks
 print_header "Critical Security Tests"
 
+# Helper to fetch HTTP status code
+get_status() {
+    local url="$1"
+    local output status
+
+    if ! output=$(wget -q --server-response --timeout=10 --output-document=/dev/null "$url" 2>&1); then
+        echo "000"
+        return
+    fi
+
+    status=$(printf '%s\n' "$output" | awk '/HTTP\//{code=$2} END{if (code) print code; else print "000"}')
+    status=${status//$'\r'/}
+    status=${status:-000}
+    echo "$status"
+}
+
 # Test PHP execution in uploads
-response=$(wget -q --server-response --timeout=10 --output-document=/dev/null "https://$DOMAIN/wp-content/uploads/test.php" 2>&1 | grep "HTTP/" | tail -1 | awk '{print $2}' || echo "000")
+response=$(get_status "https://$DOMAIN/wp-content/uploads/test.php")
 if [[ "$response" == "403" ]]; then
     print_success "PHP execution blocked in uploads - HTTP $response ✓"
 else
@@ -57,7 +73,7 @@ else
 fi
 
 # Test wp-config access
-response=$(wget -q --server-response --timeout=10 --output-document=/dev/null "https://$DOMAIN/wp-config.php" 2>&1 | grep "HTTP/" | tail -1 | awk '{print $2}' || echo "000")
+response=$(get_status "https://$DOMAIN/wp-config.php")
 if [[ "$response" == "403" ]]; then
     print_success "wp-config.php access blocked - HTTP $response ✓"
 else
@@ -65,7 +81,7 @@ else
 fi
 
 # Test xmlrpc.php access
-response=$(wget -q --server-response --timeout=10 --output-document=/dev/null "https://$DOMAIN/xmlrpc.php" 2>&1 | grep "HTTP/" | tail -1 | awk '{print $2}' || echo "000")
+response=$(get_status "https://$DOMAIN/xmlrpc.php")
 if [[ "$response" == "403" ]]; then
     print_success "xmlrpc.php access blocked - HTTP $response ✓"
 else
@@ -73,7 +89,7 @@ else
 fi
 
 # Test readme.html access
-response=$(wget -q --server-response --timeout=10 --output-document=/dev/null "https://$DOMAIN/readme.html" 2>&1 | grep "HTTP/" | tail -1 | awk '{print $2}' || echo "000")
+response=$(get_status "https://$DOMAIN/readme.html")
 if [[ "$response" == "403" ]]; then
     print_success "readme.html access blocked - HTTP $response ✓"
 else
@@ -83,14 +99,14 @@ fi
 print_header "Normal Functionality Tests"
 
 # Test normal functionality
-response=$(wget -q --server-response --timeout=10 --output-document=/dev/null "https://$DOMAIN/" 2>&1 | grep "HTTP/" | tail -1 | awk '{print $2}' || echo "000")
+response=$(get_status "https://$DOMAIN/")
 if [[ "$response" == "200" ]]; then
     print_success "Homepage accessible - HTTP $response ✓"
 else
     print_error "Homepage not accessible - HTTP $response ✗"
 fi
 
-response=$(wget -q --server-response --timeout=10 --output-document=/dev/null "https://$DOMAIN/wp-admin/" 2>&1 | grep "HTTP/" | tail -1 | awk '{print $2}' || echo "000")
+response=$(get_status "https://$DOMAIN/wp-admin/")
 if [[ "$response" == "302" || "$response" == "200" ]]; then
     print_success "WP Admin accessible - HTTP $response ✓"
 else
