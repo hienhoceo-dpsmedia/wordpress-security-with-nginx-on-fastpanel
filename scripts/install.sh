@@ -13,6 +13,9 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
+# Repository URLs
+RAW_BASE_URL="https://raw.githubusercontent.com/hienhoceo-dpsmedia/wordpress-security-with-nginx-on-fastpanel/master"
+
 # Function to print colored output
 print_status() {
     echo -e "${BLUE}[INFO]${NC} $1"
@@ -38,12 +41,63 @@ check_root() {
     fi
 }
 
+# Ensure required dependencies exist
+ensure_dependencies() {
+    if ! command -v curl >/dev/null 2>&1; then
+        print_error "curl is required but not installed. Please install curl and re-run this script."
+        exit 1
+    fi
+
+    if ! command -v crontab >/dev/null 2>&1; then
+        print_error "crontab command not found. Install cron (e.g., cron, cronie) before proceeding."
+        exit 1
+    fi
+}
+
 # Check if FastPanel is installed
 check_fastpanel() {
     if [[ ! -d "/etc/nginx/fastpanel2-sites" ]]; then
         print_error "FastPanel directory not found at /etc/nginx/fastpanel2-sites"
         print_error "Please ensure FastPanel is installed"
         exit 1
+    fi
+}
+
+# Configure nightly automation
+setup_nightly_automation() {
+    print_status "Configuring nightly automation..."
+
+    local automation_script="/usr/local/sbin/wp-security-nightly.sh"
+    local cron_entry="30 2 * * * ${automation_script} >> /var/log/wp-security-nightly.log 2>&1"
+
+    if [[ ! -f "$automation_script" ]]; then
+        cat <<'EOF' > "$automation_script"
+#!/bin/bash
+
+set -euo pipefail
+
+TMP_SCRIPT="$(mktemp)"
+cleanup() {
+    rm -f "$TMP_SCRIPT"
+}
+trap cleanup EXIT
+
+curl -fsSL https://raw.githubusercontent.com/hienhoceo-dpsmedia/wordpress-security-with-nginx-on-fastpanel/master/install-direct.sh -o "$TMP_SCRIPT"
+bash "$TMP_SCRIPT"
+
+find /root -maxdepth 1 -type d -name 'backup-fastpanel2-sites-*' -mtime +7 -print0 | xargs -0r rm -rf
+EOF
+        chmod +x "$automation_script"
+        print_success "Created nightly automation script at $automation_script"
+    else
+        print_warning "Nightly automation script already exists at $automation_script"
+    fi
+
+    if crontab -l 2>/dev/null | grep -F "$automation_script" >/dev/null 2>&1; then
+        print_status "Nightly cron job already configured"
+    else
+        (crontab -l 2>/dev/null || true; echo "$cron_entry") | crontab -
+        print_success "Scheduled nightly cron job at 02:30 for WordPress security automation"
     fi
 }
 
@@ -188,6 +242,7 @@ main() {
     # Run checks
     check_root
     check_fastpanel
+    ensure_dependencies
 
     # Install components
     create_includes_dir
@@ -200,6 +255,8 @@ main() {
         reload_nginx
         verify_installation
 
+        setup_nightly_automation
+
         echo
         print_success "Installation completed successfully!"
         echo
@@ -209,6 +266,7 @@ main() {
         echo "3. Monitor your logs for any blocked attempts"
         echo
         print_status "Your backup is located at: $BACKUP_DIR"
+        print_status "Nightly automation script: /usr/local/sbin/wp-security-nightly.sh (runs at 02:30 daily)"
 
     else
         print_error "Nginx configuration test failed. Please check the error above."
