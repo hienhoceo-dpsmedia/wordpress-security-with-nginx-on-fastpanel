@@ -409,12 +409,67 @@ The approach defends at the webserver level — even if a vulnerable plugin lets
 
 Keep a backup of your configs before making changes — we made backups in the examples, and you should too.
 
+## Troubleshooting
+
+### Setup Command Fails
+
+If the 1-command setup fails with `bash: /dev/fd/63: No such file or directory`, try these alternatives:
+
+#### **Method 1: Use wget instead of curl**
+```bash
+sudo bash <(wget -qO- https://raw.githubusercontent.com/hienhoceo-dpsmedia/wordpress-security-with-nginx-on-fastpanel/main/setup.sh)
+```
+
+#### **Method 2: Use CDN alternative**
+```bash
+sudo bash <(curl -s https://cdn.jsdelivr.net/gh/hienhoceo-dpsmedia/wordpress-security-with-nginx-on-fastpanel@main/setup.sh)
+```
+
+#### **Method 3: Download and run separately**
+```bash
+# Download the setup script
+wget https://raw.githubusercontent.com/hienhoceo-dpsmedia/wordpress-security-with-nginx-on-fastpanel/main/setup.sh
+# Make it executable
+chmod +x setup.sh
+# Run it
+sudo ./setup.sh
+```
+
+#### **Method 4: Test connectivity**
+```bash
+# Test if GitHub is accessible
+curl -I https://raw.githubusercontent.com/hienhoceo-dpsmedia/wordpress-security-with-nginx-on-fastpanel/main/setup.sh
+```
+
+### Handling New Websites
+
+After creating new websites in FastPanel, run the setup again to protect them:
+
+```bash
+sudo bash <(curl -s https://raw.githubusercontent.com/hienhoceo-dpsmedia/wordpress-security-with-nginx-on-fastpanel/main/setup.sh)
+```
+
+This is **safe to run multiple times** and will:
+- ✅ Create fresh backup
+- ✅ Protect any new websites
+- ✅ Not affect existing protected sites
+
+### Common Issues
+
+| Issue | Solution |
+|-------|----------|
+| **Permission denied** | Run with `sudo` |
+| **Network timeout** | Try alternative methods above |
+| **FastPanel not found** | Ensure FastPanel is installed |
+| **Nginx test fails** | Check syntax errors in existing configs |
+
 ## Repository Structure
 
 ```
 WordPress-Security-with-Nginx-on-FastPanel/
 ├── README.md                          # This file
 ├── setup.sh                           # 🚀 1-command setup script
+├── setup-alternative.sh               # 🛠️ Alternative setup methods
 ├── nginx-includes/
 │   └── wordpress-security.conf        # Main security configuration
 └── scripts/
