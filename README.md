@@ -1,8 +1,62 @@
-# WordPress Security with Nginx on FastPanel — Complete Guide for Newbies
+# 🛡️ WordPress Security with Nginx on FastPanel
 
-A step-by-step, copy-paste friendly guide you can post for learners. It shows what we changed, why, and how to test. No prior deep Nginx knowledge required — follow the steps, read the explanations, and you'll understand what each command does.
+<div align="center">
 
-## Overview (what we accomplish)
+[![Security](https://img.shields.io/badge/Security-Hardening-green?style=for-the-badge&logo=security)](https://github.com/hienhoceo-dpsmedia/wordpress-security-with-nginx-on-fastpanel)
+[![WordPress](https://img.shields.io/badge/WordPress-Protection-blue?style=for-the-badge&logo=wordpress)](https://wordpress.org)
+[![Nginx](https://img.shields.io/badge/Nginx-Web%20Server-009639?style=for-the-badge&logo=nginx)](https://nginx.org)
+[![FastPanel](https://img.shields.io/badge/FastPanel-Hosting%20Panel-orange?style=for-the-badge)](https://fastpanel.direct)
+[![License](https://img.shields.io/badge/License-MIT-purple?style=for-the-badge)](LICENSE)
+[![Stars](https://img.shields.io/github/stars/hienhoceo-dpsmedia/wordpress-security-with-nginx-on-fastpanel?style=for-the-badge&logo=github&color=yellow)](https://github.com/hienhoceo-dpsmedia/wordpress-security-with-nginx-on-fastpanel/stargazers)
+
+**🚀 One-command WordPress security hardening for FastPanel servers**
+
+A step-by-step, copy-paste friendly guide that protects WordPress sites at the Nginx level. No prior deep Nginx knowledge required — follow the steps, read the explanations, and you'll understand what each command does.
+
+[⭐ **Give us a star**](https://github.com/hienhoceo-dpsmedia/wordpress-security-with-nginx-on-fastpanel) if this helps you! | [🚀 **Quick Start**(#-quick-start---1-command-setup-recommended)
+
+</div>
+
+## ✨ Features
+
+- 🛡️ **Comprehensive Protection** - Blocks PHP execution in uploads, sensitive file access, backup files, and known exploit patterns
+- 🚀 **One-Command Setup** - Install security rules for all WordPress sites with a single command
+- 🔄 **Automatic Updates** - Nightly cron job protects new websites automatically
+- ✅ **Built-in Testing** - Comprehensive security test scripts included
+- 📋 **Beginner Friendly** - Copy-paste commands with detailed explanations
+- 🔧 **FastPanel Optimized** - Specifically designed for FastPanel's directory structure
+- 📊 **Progress Tracking** - Visual progress indicators during installation
+- 🗂️ **Smart Backups** - Automatic backups before any changes
+
+## 🎯 What This Protects Against
+
+| Threat Type | How We Block It |
+|-------------|-----------------|
+| **PHP Shell Uploads** | Prevents PHP execution in `/wp-content/uploads/` |
+| **Config File Access** | Blocks direct access to `wp-config.php`, `.env`, etc. |
+| **Backup File Exposure** | Denies access to `.bak`, `.backup`, `.sql`, `.tar.gz` files |
+| **Known Exploits** | Blocks common exploit files like `timthumb.php`, `webshell.php` |
+| **Attack Patterns** | Filters malicious query strings and attack signatures |
+| **Hidden Files** | Prevents access to `.git`, `.svn`, `.htaccess` files |
+| **Dangerous Scripts** | Blocks execution of `.cgi`, `.pl`, `.py`, `.sh` files |
+
+## 🚀 Quick Demo
+
+```bash
+# Install security for all WordPress sites
+wget -qO- https://raw.githubusercontent.com/hienhoceo-dpsmedia/wordpress-security-with-nginx-on-fastpanel/master/install-direct.sh | sudo bash
+
+# Test protections
+wget -qO- https://raw.githubusercontent.com/hienhoceo-dpsmedia/wordpress-security-with-nginx-on-fastpanel/master/scripts/quick-test.sh | bash -s your-domain.com
+```
+
+**Expected Results:**
+- ✅ PHP execution in uploads → **HTTP 403 Forbidden**
+- ✅ wp-config.php access → **HTTP 403 Forbidden**
+- ✅ xmlrpc.php access → **HTTP 403 Forbidden**
+- ✅ Normal pages → **HTTP 200 OK**
+
+## 📋 Overview (what we accomplish)
 
 - Add a high-priority Nginx include file that blocks common WordPress attack surfaces (sensitive files, upload-PHP execution, hidden files, backup files, exploit patterns).
 - Ensure that include is loaded before the broad location `~ \.php$` handler in every FastPanel-managed site so the blocking rules take effect.
@@ -19,6 +73,19 @@ WordPress websites often have critical files in predictable locations (`wp-confi
 - Expose backup and log files containing credentials.
 
 We use Nginx location rules to deny access to those things at the webserver level, so even if a file exists, it can't be executed or downloaded.
+
+## 📊 Security Impact
+
+| Protection Type | Files/Paths Blocked | Risk Mitigation |
+|-----------------|-------------------|-----------------|
+| **Config Files** | `wp-config.php`, `.env`, `xmlrpc.php` | 🔴 High - Prevents credential exposure |
+| **Upload Security** | `*.php` in `/wp-content/uploads/` | 🔴 High - Stops shell uploads |
+| **Backup Files** | `*.bak`, `*.sql`, `*.tar.gz` | 🟡 Medium - Prevents data leaks |
+| **Development Files** | `readme.html`, `license.txt` | 🟢 Low - Reduces information disclosure |
+| **Known Exploits** | `timthumb.php`, `webshell.php` | 🔴 High - Blocks common attacks |
+| **Attack Patterns** | SQL injection, XSS patterns | 🔴 High - Filters malicious requests |
+
+**🛡️ Total Coverage:** 20+ attack vectors blocked at the webserver level
 
 ## Prerequisites
 
@@ -494,10 +561,39 @@ WordPress-Security-with-Nginx-on-FastPanel/
     └── quick-test.sh                  # Quick security checks
 ```
 
-## Contributing
+## 🔧 Repository Topics
 
-Feel free to submit issues and enhancement requests!
+**Recommended GitHub Topics for this repository:**
+```
+wordpress-security, nginx, fastpanel, web-security, wordpress, security-hardening,
+server-security, php-security, web-server, nginx-configuration, wordpress-protection,
+cybersecurity, security-tools, web-hardening, server-hardening, penetration-testing,
+security-audit, wordpress-hardening, nginx-security, hosting-security
+```
 
-## License
+> 💡 **Repository Owners:** Add these topics in your GitHub repository settings under Settings → Topics to improve discoverability!
+
+## 📈 Contributing
+
+Contributions are welcome! Please feel free to submit issues and enhancement requests:
+
+- 🐛 **Bug Reports** - Found an issue? Please open an issue with details
+- 💡 **Feature Requests** - Have an idea? We'd love to hear it
+- 📚 **Documentation** - Help improve the guides and explanations
+- 🔒 **Security** - Found a vulnerability? Please report responsibly
+
+## 📄 License
 
 MIT License - feel free to use and modify for your needs.
+
+---
+
+<div align="center">
+
+**⭐ If this project helps secure your WordPress sites, please give it a star!**
+
+Made with ❤️ for the WordPress community
+
+[🔝 Back to top](#-wordpress-security-with-nginx-on-fastpanel)
+
+</div>
