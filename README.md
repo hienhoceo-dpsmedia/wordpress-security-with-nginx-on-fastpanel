@@ -422,7 +422,7 @@ sudo bash <(wget -qO- https://raw.githubusercontent.com/hienhoceo-dpsmedia/wordp
 
 #### **Method 2: Use CDN alternative**
 ```bash
-sudo bash <(curl -s https://cdn.jsdelivr.net/gh/hienhoceo-dpsmedia/wordpress-security-with-nginx-on-fastpanel@main/setup.sh)
+sudo bash <(curl -s https://cdn.jsdelivr.net/gh/hienhoceo-dpsmedia/wordpress-security-with-nginx-on-fastpanel@master/setup.sh)
 ```
 
 #### **Method 3: Download and run separately**
