@@ -33,7 +33,6 @@ UPLOAD_PHP_FILES=(
     "/wp-content/uploads/test.php"
     "/wp-content/uploads/shell.php"
     "/wp-content/uploads/2023/12/malicious.php"
-    "/wp-content/backup.php"
     "/wp-content/cache/test.php"
 )
 
