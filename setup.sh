@@ -65,8 +65,8 @@ download_files() {
     TEMP_DIR=$(mktemp -d)
     cd "$TEMP_DIR"
 
-    # Create directory structure
-    mkdir -p nginx-includes scripts
+    # Create directory structure to match install.sh expectations
+    mkdir -p nginx-includes
 
     # Download security configuration
     print_status "Downloading security configuration..."
@@ -74,14 +74,14 @@ download_files() {
 
     # Download installation script
     print_status "Downloading installation script..."
-    curl -s -o scripts/install.sh "$RAW_URL/scripts/install.sh"
+    curl -s -o install.sh "$RAW_URL/scripts/install.sh"
 
     # Download quick test script
     print_status "Downloading test script..."
-    curl -s -o scripts/quick-test.sh "$RAW_URL/scripts/quick-test.sh"
+    curl -s -o quick-test.sh "$RAW_URL/scripts/quick-test.sh"
 
     # Make scripts executable
-    chmod +x scripts/install.sh scripts/quick-test.sh
+    chmod +x install.sh quick-test.sh
 
     print_success "Files downloaded successfully"
 }
@@ -91,7 +91,7 @@ run_installation() {
     print_header "Starting WordPress Security Installation"
 
     # Install the security configuration
-    ./scripts/install.sh
+    ./install.sh
 
     print_success "Installation completed!"
 }
@@ -114,7 +114,7 @@ offer_test() {
         if [[ -n "$domains" ]]; then
             for domain in $domains; do
                 print_status "Testing $domain..."
-                ./scripts/quick-test.sh "$domain"
+                ./quick-test.sh "$domain"
                 echo
             done
         else
