@@ -99,16 +99,15 @@ update_vhosts() {
     local failed=0
     local vhost_array=()
 
-    # Build array of vhost files
-    for vhost in /etc/nginx/fastpanel2-sites/*/*.conf; do
-        if [[ -f "$vhost" ]]; then
-            vhost_array+=("$vhost")
-            ((total++))
-        fi
-    done
+    while IFS= read -r -d '' vhost; do
+        vhost_array+=("$vhost")
+    done < <(find /etc/nginx/fastpanel2-sites -type f -name '*.conf' -print0 2>/dev/null || true)
+
+    total=${#vhost_array[@]}
 
     if [[ $total -eq 0 ]]; then
         print_warning "No vhost configuration files found in /etc/nginx/fastpanel2-sites/"
+        print_status "If your FastPanel stores configs elsewhere, update the script path accordingly."
         return 0
     fi
 
@@ -229,15 +228,19 @@ verify_installation() {
     local total_vhosts=0
     local includes_found=0
     local missing_sites=()
+    local vhost_array=()
 
-    for vhost in /etc/nginx/fastpanel2-sites/*/*.conf; do
-        if [[ -f "$vhost" ]]; then
-            ((total_vhosts++))
-            if grep -q "fastpanel2-includes" "$vhost"; then
-                ((includes_found++))
-            else
-                missing_sites+=("$(basename "$vhost")")
-            fi
+    while IFS= read -r -d '' vhost; do
+        vhost_array+=("$vhost")
+    done < <(find /etc/nginx/fastpanel2-sites -type f -name '*.conf' -print0 2>/dev/null || true)
+
+    total_vhosts=${#vhost_array[@]}
+
+    for vhost in "${vhost_array[@]}"; do
+        if grep -q "fastpanel2-includes" "$vhost"; then
+            ((includes_found++))
+        else
+            missing_sites+=("$(basename "$vhost")")
         fi
     done
 
@@ -253,12 +256,13 @@ verify_installation() {
             done
             print_status ""
             print_status "To fix remaining sites manually, run:"
-            print_status "for conf_file in /etc/nginx/fastpanel2-sites/*/*.conf; do"
+            print_status "find /etc/nginx/fastpanel2-sites -type f -name '*.conf' -print0 | \\"
+            print_status "while IFS= read -r -d '' conf_file; do"
             print_status "  if [[ -f \"\$conf_file\" ]] && ! grep -q \"fastpanel2-includes\" \"\$conf_file\"; then"
             print_status "    sed -i '/include \\/etc\\/nginx\\/fastpanel2-includes\\/\\*\\.conf;/d' \"\$conf_file\""
             print_status "    sed -i '/disable_symlinks if_not_owner from=\\$root_path;/a\\\\    # load security includes early\\\\    include /etc/nginx/fastpanel2-includes/*.conf;' \"\$conf_file\""
             print_status "  fi"
-            print_status "done"
+            print_status "done < /dev/stdin"
             print_status "nginx -t && systemctl reload nginx"
         fi
     else

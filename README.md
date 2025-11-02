@@ -152,7 +152,8 @@ Run this (careful, it edits vhost configs — backups are created automatically)
 sudo cp -a /etc/nginx/fastpanel2-sites /root/backup-fastpanel2-sites-$(date +%F_%T)
 
 # For each vhost config, remove duplicates and insert the include after disable_symlinks
-for vhost in /etc/nginx/fastpanel2-sites/*/*.conf; do
+find /etc/nginx/fastpanel2-sites -type f -name '*.conf' -print0 | \
+while IFS= read -r -d '' vhost; do
   echo "Updating $vhost"
   sudo sed -i '/include \/etc\/nginx\/fastpanel2-includes\/\*\.conf;/d' "$vhost"
   sudo sed -i '/disable_symlinks if_not_owner from=\$root_path;/a\    # load security includes early\n    include /etc/nginx/fastpanel2-includes/*.conf;' "$vhost"
@@ -166,7 +167,7 @@ sudo nginx -t && sudo systemctl reload nginx
 
 - `sed -i '/.../d'` removes any prior include lines to avoid duplicates.
 - `sed -i '/disable_symlinks .../a\ ...'` appends the include right after the disable_symlinks line within the server block, so security rules are read before `location ~ \.php$` handlers.
-- If you have a different vhost layout (not under `/etc/nginx/fastpanel2-sites/`), adjust the `for vhost in ...` path accordingly.
+- The `find` command works whether FastPanel stores vhosts directly in `/etc/nginx/fastpanel2-sites/` or in child directories. Update the base path if your panel uses a custom location.
 
 ### 3 — Test the rules (quick checks + separate category scripts)
 
@@ -222,7 +223,8 @@ The repository includes test scripts:
 Find the include lines across sites:
 
 ```bash
-sudo grep -n "fastpanel2-includes" /etc/nginx/fastpanel2-sites/*/*.conf
+find /etc/nginx/fastpanel2-sites -type f -name '*.conf' -print0 | \
+xargs -0 sudo grep -n "fastpanel2-includes"
 ```
 
 Show context for a single vhost (replace path as needed):
@@ -390,7 +392,8 @@ sudo chmod 644 /etc/nginx/fastpanel2-includes/wordpress-security.conf
 
 # Backup vhosts and insert includes for all sites
 sudo cp -a /etc/nginx/fastpanel2-sites /root/backup-fastpanel2-sites-$(date +%F_%T)
-for vhost in /etc/nginx/fastpanel2-sites/*/*.conf; do
+find /etc/nginx/fastpanel2-sites -type f -name '*.conf' -print0 | \
+while IFS= read -r -d '' vhost; do
   sudo sed -i '/include \/etc\/nginx\/fastpanel2-includes\/\*\.conf;/d' "$vhost"
   sudo sed -i '/disable_symlinks if_not_owner from=\$root_path;/a\    include /etc/nginx/fastpanel2-includes/*.conf;' "$vhost"
 done

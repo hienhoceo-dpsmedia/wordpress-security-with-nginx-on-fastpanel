@@ -334,8 +334,14 @@ check_security_config() {
     # Check if vhosts include the security config
     ((TOTAL_TESTS++))
     local includes_found=0
-    for vhost in /etc/nginx/fastpanel2-sites/*/*.conf; do
-        if [[ -f "$vhost" ]] && grep -q "fastpanel2-includes" "$vhost"; then
+    local vhost_array=()
+
+    while IFS= read -r -d '' vhost; do
+        vhost_array+=("$vhost")
+    done < <(find /etc/nginx/fastpanel2-sites -type f -name '*.conf' -print0 2>/dev/null || true)
+
+    for vhost in "${vhost_array[@]}"; do
+        if grep -q "fastpanel2-includes" "$vhost"; then
             ((includes_found++))
         fi
     done

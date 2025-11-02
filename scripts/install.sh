@@ -89,20 +89,30 @@ update_vhosts() {
     print_status "Updating vhost configurations..."
 
     local count=0
-    for vhost in /etc/nginx/fastpanel2-sites/*/*.conf; do
-        if [[ -f "$vhost" ]]; then
-            print_status "Processing: $vhost"
+    local vhost_array=()
 
-            # Remove any existing include lines to avoid duplicates
-            sed -i '/include \/etc\/nginx\/fastpanel2-includes\/\*\.conf;/d' "$vhost"
+    while IFS= read -r -d '' vhost; do
+        vhost_array+=("$vhost")
+    done < <(find /etc/nginx/fastpanel2-sites -type f -name '*.conf' -print0 2>/dev/null || true)
 
-            # Insert the include after disable_symlinks line
-            if grep -q "disable_symlinks if_not_owner from=\$root_path;" "$vhost"; then
-                sed -i '/disable_symlinks if_not_owner from=\$root_path;/a\    # load security includes early\n    include /etc/nginx/fastpanel2-includes/*.conf;' "$vhost"
-                ((count++))
-            else
-                print_warning "Could not find disable_symlinks directive in $vhost"
-            fi
+    if [[ ${#vhost_array[@]} -eq 0 ]]; then
+        print_warning "No vhost configuration files found in /etc/nginx/fastpanel2-sites/"
+        print_status "If your FastPanel stores configs elsewhere, update the script path accordingly."
+        return 0
+    fi
+
+    for vhost in "${vhost_array[@]}"; do
+        print_status "Processing: $vhost"
+
+        # Remove any existing include lines to avoid duplicates
+        sed -i '/include \/etc\/nginx\/fastpanel2-includes\/\*\.conf;/d' "$vhost"
+
+        # Insert the include after disable_symlinks line
+        if grep -q "disable_symlinks if_not_owner from=\$root_path;" "$vhost"; then
+            sed -i '/disable_symlinks if_not_owner from=\$root_path;/a\    # load security includes early\n    include /etc/nginx/fastpanel2-includes/*.conf;' "$vhost"
+            ((count++))
+        else
+            print_warning "Could not find disable_symlinks directive in $vhost"
         fi
     done
 
@@ -148,8 +158,14 @@ verify_installation() {
 
     # Check if vhosts include the security config
     local includes_found=0
-    for vhost in /etc/nginx/fastpanel2-sites/*/*.conf; do
-        if [[ -f "$vhost" ]] && grep -q "fastpanel2-includes" "$vhost"; then
+    local vhost_array=()
+
+    while IFS= read -r -d '' vhost; do
+        vhost_array+=("$vhost")
+    done < <(find /etc/nginx/fastpanel2-sites -type f -name '*.conf' -print0 2>/dev/null || true)
+
+    for vhost in "${vhost_array[@]}"; do
+        if grep -q "fastpanel2-includes" "$vhost"; then
             ((includes_found++))
         fi
     done

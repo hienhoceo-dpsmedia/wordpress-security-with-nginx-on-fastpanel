@@ -66,16 +66,25 @@ remove_from_vhosts() {
     print_status "Removing security include from vhost configurations..."
 
     local count=0
-    for vhost in /etc/nginx/fastpanel2-sites/*/*.conf; do
-        if [[ -f "$vhost" ]]; then
-            # Check if the file contains our include
-            if grep -q "fastpanel2-includes" "$vhost"; then
-                print_status "Removing include from: $vhost"
-                sed -i '/include \/etc\/nginx\/fastpanel2-includes\/\*\.conf;/d' "$vhost"
-                # Also remove the comment line
-                sed -i '/# load security includes early/d' "$vhost"
-                ((count++))
-            fi
+    local vhost_array=()
+
+    while IFS= read -r -d '' vhost; do
+        vhost_array+=("$vhost")
+    done < <(find /etc/nginx/fastpanel2-sites -type f -name '*.conf' -print0 2>/dev/null || true)
+
+    if [[ ${#vhost_array[@]} -eq 0 ]]; then
+        print_warning "No vhost configuration files found in /etc/nginx/fastpanel2-sites/"
+        print_status "If your FastPanel stores configs elsewhere, update the script path accordingly."
+        return 0
+    fi
+
+    for vhost in "${vhost_array[@]}"; do
+        if grep -q "fastpanel2-includes" "$vhost"; then
+            print_status "Removing include from: $vhost"
+            sed -i '/include \/etc\/nginx\/fastpanel2-includes\/\*\.conf;/d' "$vhost"
+            # Also remove the comment line
+            sed -i '/# load security includes early/d' "$vhost"
+            ((count++))
         fi
     done
 
@@ -132,8 +141,14 @@ verify_uninstall() {
 
     # Check if vhosts still have the include
     local includes_found=0
-    for vhost in /etc/nginx/fastpanel2-sites/*/*.conf; do
-        if [[ -f "$vhost" ]] && grep -q "fastpanel2-includes" "$vhost"; then
+    local vhost_array=()
+
+    while IFS= read -r -d '' vhost; do
+        vhost_array+=("$vhost")
+    done < <(find /etc/nginx/fastpanel2-sites -type f -name '*.conf' -print0 2>/dev/null || true)
+
+    for vhost in "${vhost_array[@]}"; do
+        if grep -q "fastpanel2-includes" "$vhost"; then
             ((includes_found++))
         fi
     done
