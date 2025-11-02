@@ -147,7 +147,7 @@ update_vhosts() {
                     mv "$backup_name" "$vhost"
                 fi
             else
-                print_warning "⚠ Could not find disable_symlinks directive in $(basename "$vhost\")"
+                print_warning "⚠ Could not find disable_symlinks directive in $(basename "$vhost")"
                 print_status "  Attempting alternative placement..."
 
                 # Alternative: add include at the end of server block
