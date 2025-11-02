@@ -32,7 +32,7 @@ We use Nginx location rules to deny access to those things at the webserver leve
 Run this single command on your VPS to install WordPress security:
 
 ```bash
-sudo bash <(curl -s https://raw.githubusercontent.com/hienhoceo-dpsmedia/wordpress-security-with-nginx-on-fastpanel/main/setup.sh)
+sudo bash <(curl -s https://raw.githubusercontent.com/hienhoceo-dpsmedia/wordpress-security-with-nginx-on-fastpanel/master/setup.sh)
 ```
 
 That's it! The script will:
@@ -46,7 +46,7 @@ That's it! The script will:
 After installation, test your security:
 
 ```bash
-curl -s https://raw.githubusercontent.com/hienhoceo-dpsmedia/wordpress-security-with-nginx-on-fastpanel/main/scripts/quick-test.sh | bash -s your-domain.com
+curl -s https://raw.githubusercontent.com/hienhoceo-dpsmedia/wordpress-security-with-nginx-on-fastpanel/master/scripts/quick-test.sh | bash -s your-domain.com
 ```
 
 ---
@@ -417,7 +417,7 @@ If the 1-command setup fails with `bash: /dev/fd/63: No such file or directory`,
 
 #### **Method 1: Use wget instead of curl**
 ```bash
-sudo bash <(wget -qO- https://raw.githubusercontent.com/hienhoceo-dpsmedia/wordpress-security-with-nginx-on-fastpanel/main/setup.sh)
+sudo bash <(wget -qO- https://raw.githubusercontent.com/hienhoceo-dpsmedia/wordpress-security-with-nginx-on-fastpanel/master/setup.sh)
 ```
 
 #### **Method 2: Use CDN alternative**
@@ -428,7 +428,7 @@ sudo bash <(curl -s https://cdn.jsdelivr.net/gh/hienhoceo-dpsmedia/wordpress-sec
 #### **Method 3: Download and run separately**
 ```bash
 # Download the setup script
-wget https://raw.githubusercontent.com/hienhoceo-dpsmedia/wordpress-security-with-nginx-on-fastpanel/main/setup.sh
+wget https://raw.githubusercontent.com/hienhoceo-dpsmedia/wordpress-security-with-nginx-on-fastpanel/master/setup.sh
 # Make it executable
 chmod +x setup.sh
 # Run it
@@ -438,7 +438,7 @@ sudo ./setup.sh
 #### **Method 4: Test connectivity**
 ```bash
 # Test if GitHub is accessible
-curl -I https://raw.githubusercontent.com/hienhoceo-dpsmedia/wordpress-security-with-nginx-on-fastpanel/main/setup.sh
+curl -I https://raw.githubusercontent.com/hienhoceo-dpsmedia/wordpress-security-with-nginx-on-fastpanel/master/setup.sh
 ```
 
 ### Handling New Websites
@@ -446,7 +446,7 @@ curl -I https://raw.githubusercontent.com/hienhoceo-dpsmedia/wordpress-security-
 After creating new websites in FastPanel, run the setup again to protect them:
 
 ```bash
-sudo bash <(curl -s https://raw.githubusercontent.com/hienhoceo-dpsmedia/wordpress-security-with-nginx-on-fastpanel/main/setup.sh)
+sudo bash <(curl -s https://raw.githubusercontent.com/hienhoceo-dpsmedia/wordpress-security-with-nginx-on-fastpanel/master/setup.sh)
 ```
 
 This is **safe to run multiple times** and will:
