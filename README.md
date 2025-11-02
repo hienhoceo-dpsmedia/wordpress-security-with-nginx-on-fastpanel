@@ -27,12 +27,12 @@ We use Nginx location rules to deny access to those things at the webserver leve
 - Site configs located under `/etc/nginx/fastpanel2-sites/` (the guide assumes this layout).
 - You're comfortable running the provided shell commands (copy/paste).
 
-## 🚀 Quick Start - 1 Command Setup
+## 🚀 Quick Start - 1 Command Setup (Recommended)
 
 Run this single command on your VPS to install WordPress security:
 
 ```bash
-sudo bash <(curl -s https://raw.githubusercontent.com/hienhoceo-dpsmedia/wordpress-security-with-nginx-on-fastpanel/master/setup.sh)
+wget -qO- https://raw.githubusercontent.com/hienhoceo-dpsmedia/wordpress-security-with-nginx-on-fastpanel/master/install-direct.sh | sudo bash
 ```
 
 That's it! The script will:
@@ -46,7 +46,7 @@ That's it! The script will:
 After installation, test your security:
 
 ```bash
-curl -s https://raw.githubusercontent.com/hienhoceo-dpsmedia/wordpress-security-with-nginx-on-fastpanel/master/scripts/quick-test.sh | bash -s your-domain.com
+wget -qO- https://raw.githubusercontent.com/hienhoceo-dpsmedia/wordpress-security-with-nginx-on-fastpanel/master/scripts/quick-test.sh | bash -s your-domain.com
 ```
 
 ---
@@ -411,39 +411,34 @@ Keep a backup of your configs before making changes — we made backups in the e
 
 ## Troubleshooting
 
-### Setup Command Fails
+### Alternative Installation Methods
 
-If the 1-command setup fails with `bash: /dev/fd/63: No such file or directory`, try these alternatives:
+If the recommended wget method fails, try these alternatives:
 
-#### **Method 1: Use wget instead of curl**
+#### **Method 1: Download and run separately (Most Reliable)**
 ```bash
-sudo bash <(wget -qO- https://raw.githubusercontent.com/hienhoceo-dpsmedia/wordpress-security-with-nginx-on-fastpanel/master/setup.sh)
-```
-
-#### **Method 2: Use CDN alternative**
-```bash
-sudo bash <(curl -s https://cdn.jsdelivr.net/gh/hienhoceo-dpsmedia/wordpress-security-with-nginx-on-fastpanel@master/setup.sh)
-```
-
-#### **Method 3: Direct installation (Recommended)**
-```bash
-sudo bash <(curl -s https://raw.githubusercontent.com/hienhoceo-dpsmedia/wordpress-security-with-nginx-on-fastpanel/master/install-direct.sh)
-```
-
-#### **Method 4: Download and run separately**
-```bash
-# Download the setup script
-wget https://raw.githubusercontent.com/hienhoceo-dpsmedia/wordpress-security-with-nginx-on-fastpanel/master/setup.sh
+# Download the installation script
+wget https://raw.githubusercontent.com/hienhoceo-dpsmedia/wordpress-security-with-nginx-on-fastpanel/master/install-direct.sh
 # Make it executable
-chmod +x setup.sh
+chmod +x install-direct.sh
 # Run it
-sudo ./setup.sh
+sudo ./install-direct.sh
 ```
 
-#### **Method 5: Test connectivity**
+#### **Method 2: Process substitution (may not work on some systems)**
+```bash
+sudo bash <(wget -qO- https://raw.githubusercontent.com/hienhoceo-dpsmedia/wordpress-security-with-nginx-on-fastpanel/master/install-direct.sh)
+```
+
+#### **Method 3: Use CDN alternative**
+```bash
+wget -qO- https://cdn.jsdelivr.net/gh/hienhoceo-dpsmedia/wordpress-security-with-nginx-on-fastpanel@master/install-direct.sh | sudo bash
+```
+
+#### **Method 4: Test connectivity**
 ```bash
 # Test if GitHub is accessible
-curl -I https://raw.githubusercontent.com/hienhoceo-dpsmedia/wordpress-security-with-nginx-on-fastpanel/master/setup.sh
+wget --spider https://raw.githubusercontent.com/hienhoceo-dpsmedia/wordpress-security-with-nginx-on-fastpanel/master/install-direct.sh
 ```
 
 ### Handling New Websites
@@ -451,7 +446,7 @@ curl -I https://raw.githubusercontent.com/hienhoceo-dpsmedia/wordpress-security-
 After creating new websites in FastPanel, run the setup again to protect them:
 
 ```bash
-sudo bash <(curl -s https://raw.githubusercontent.com/hienhoceo-dpsmedia/wordpress-security-with-nginx-on-fastpanel/master/setup.sh)
+wget -qO- https://raw.githubusercontent.com/hienhoceo-dpsmedia/wordpress-security-with-nginx-on-fastpanel/master/install-direct.sh | sudo bash
 ```
 
 This is **safe to run multiple times** and will:
@@ -465,6 +460,7 @@ This is **safe to run multiple times** and will:
 |-------|----------|
 | **Permission denied** | Run with `sudo` |
 | **Network timeout** | Try alternative methods above |
+| **Process substitution fails** | Use Method 1 (download and run separately) |
 | **FastPanel not found** | Ensure FastPanel is installed |
 | **Nginx test fails** | Check syntax errors in existing configs |
 

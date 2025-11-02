@@ -43,7 +43,7 @@ RAW_URL="https://raw.githubusercontent.com/hienhoceo-dpsmedia/wordpress-security
 check_root() {
     if [[ $EUID -ne 0 ]]; then
         print_error "This script must be run as root or with sudo"
-        print_status "Try: sudo bash <(curl -s $RAW_URL/setup.sh)"
+        print_status "Try: wget -qO- $RAW_URL/install-direct.sh | sudo bash"
         exit 1
     fi
 }
@@ -62,7 +62,7 @@ run_installation() {
     print_header "Starting WordPress Security Installation"
 
     # Download and run direct installation script
-    curl -s "$RAW_URL/install-direct.sh" | bash
+    wget -qO- "$RAW_URL/install-direct.sh" | bash
 
     print_success "Installation completed!"
 }
@@ -85,12 +85,12 @@ offer_test() {
         if [[ -n "$domains" ]]; then
             for domain in $domains; do
                 print_status "Testing $domain..."
-                curl -s "$RAW_URL/scripts/quick-test.sh" | bash -s "$domain"
+                wget -qO- "$RAW_URL/scripts/quick-test.sh" | bash -s "$domain"
                 echo
             done
         else
             print_warning "No domains provided. You can run tests later:"
-            print_status "curl -s https://raw.githubusercontent.com/hienhoceo-dpsmedia/WordPress-Security-with-Nginx-on-FastPanel/main/scripts/quick-test.sh | bash -s your-domain.com"
+            print_status "wget -qO- https://raw.githubusercontent.com/hienhoceo-dpsmedia/wordpress-security-with-nginx-on-fastpanel/master/scripts/quick-test.sh | bash -s your-domain.com"
         fi
     fi
 }

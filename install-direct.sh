@@ -65,7 +65,7 @@ install_security_config() {
 
     # Download the security configuration
     print_status "Downloading security configuration..."
-    if curl -s -o /etc/nginx/fastpanel2-includes/wordpress-security.conf "$RAW_URL/nginx-includes/wordpress-security.conf"; then
+    if wget -qO /etc/nginx/fastpanel2-includes/wordpress-security.conf "$RAW_URL/nginx-includes/wordpress-security.conf"; then
         print_success "Security configuration downloaded successfully"
     else
         print_error "Failed to download security configuration"
