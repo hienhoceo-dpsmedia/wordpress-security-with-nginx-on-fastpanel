@@ -3,7 +3,7 @@
 # WordPress Security Direct Installation Script
 # Combined installation - download config and update vhosts in one script
 
-set -euo pipefail
+set -Eeuo pipefail
 
 # Colors for output
 RED='\033[0;31m'
@@ -33,6 +33,8 @@ print_header() {
     echo
     echo -e "${BLUE}=== $1 ===${NC}"
 }
+
+trap 'print_error "Installation aborted (line $LINENO): $BASH_COMMAND"; exit 1' ERR
 
 # Repository URLs
 REPO_URL="https://github.com/hienhoceo-dpsmedia/wordpress-security-with-nginx-on-fastpanel"
@@ -122,27 +124,28 @@ update_vhosts() {
             local backup_name="${vhost}.backup.$(date +%s)"
             if ! cp "$vhost" "$backup_name"; then
                 print_error "Failed to backup $vhost"
-                ((failed++))
+                ((++failed))
                 continue
             fi
 
             # Remove any existing include lines to avoid duplicates
             if ! sed -i '/include \/etc\/nginx\/fastpanel2-includes\/\*\.conf;/d' "$vhost"; then
                 print_error "Failed to remove existing includes from $(basename "$vhost")"
-                ((failed++))
+                ((++failed))
                 continue
             fi
+            sed -i '/# load security includes early/d' "$vhost"
 
             # Check if disable_symlinks line exists and insert include after it
             if grep -q "disable_symlinks if_not_owner from=\$root_path;" "$vhost"; then
-                # Use a more reliable method to add the include
-                if sed -i '/disable_symlinks if_not_owner from=\$root_path;/a\    # load security includes early\n    include /etc/nginx/fastpanel2-includes/*.conf;' "$vhost"; then
-                    ((count++))
+                if sed -i '/disable_symlinks if_not_owner from=\$root_path;/a\
+    # load security includes early\
+    include /etc/nginx/fastpanel2-includes/*.conf;' "$vhost"; then
+                    ((++count))
                     print_success "✓ Added security include to $(basename "$vhost")"
                 else
                     print_error "✗ Failed to add include to $(basename "$vhost")"
-                    ((failed++))
-                    # Restore from backup
+                    ((++failed))
                     mv "$backup_name" "$vhost"
                 fi
             else
@@ -150,20 +153,21 @@ update_vhosts() {
                 print_status "  Attempting alternative placement..."
 
                 # Alternative: add include at the end of server block
-                if grep -q "listen.*80;" "$vhost" && grep -q "listen.*443;" "$vhost"; then
-                    # Add after the first listen directive
-                    if sed -i '/listen.*443;/a\    # load security includes early\n    include /etc/nginx/fastpanel2-includes/*.conf;' "$vhost"; then
-                        ((count++))
+                if grep -q "listen.*80" "$vhost" && grep -q "listen.*443" "$vhost"; then
+                    if sed -i '/listen.*443/a\
+    # load security includes early\
+    include /etc/nginx/fastpanel2-includes/*.conf;' "$vhost"; then
+                        ((++count))
                         print_success "✓ Added security include (alternative placement) to $(basename "$vhost")"
                     else
                         print_error "✗ Failed to add include to $(basename "$vhost")"
-                        ((failed++))
+                        ((++failed))
                         mv "$backup_name" "$vhost"
                     fi
                 else
                     print_warning "⚠ Could not find suitable placement in $(basename "$vhost")"
                     print_status "  You may need to manually add the include line to this file"
-                    ((failed++))
+                    ((++failed))
                 fi
             fi
 
@@ -238,7 +242,7 @@ verify_installation() {
 
     for vhost in "${vhost_array[@]}"; do
         if grep -q "fastpanel2-includes" "$vhost"; then
-            ((includes_found++))
+            ((++includes_found))
         else
             missing_sites+=("$(basename "$vhost")")
         fi

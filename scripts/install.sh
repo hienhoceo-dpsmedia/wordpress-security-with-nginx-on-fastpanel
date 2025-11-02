@@ -106,11 +106,14 @@ update_vhosts() {
 
         # Remove any existing include lines to avoid duplicates
         sed -i '/include \/etc\/nginx\/fastpanel2-includes\/\*\.conf;/d' "$vhost"
+        sed -i '/# load security includes early/d' "$vhost"
 
         # Insert the include after disable_symlinks line
         if grep -q "disable_symlinks if_not_owner from=\$root_path;" "$vhost"; then
-            sed -i '/disable_symlinks if_not_owner from=\$root_path;/a\    # load security includes early\n    include /etc/nginx/fastpanel2-includes/*.conf;' "$vhost"
-            ((count++))
+            sed -i '/disable_symlinks if_not_owner from=\$root_path;/a\
+    # load security includes early\
+    include /etc/nginx/fastpanel2-includes/*.conf;' "$vhost"
+            ((++count))
         else
             print_warning "Could not find disable_symlinks directive in $vhost"
         fi
@@ -166,7 +169,7 @@ verify_installation() {
 
     for vhost in "${vhost_array[@]}"; do
         if grep -q "fastpanel2-includes" "$vhost"; then
-            ((includes_found++))
+            ((++includes_found))
         fi
     done
 

@@ -28,17 +28,17 @@ print_status() {
 
 print_success() {
     echo -e "${GREEN}[PASS]${NC} $1"
-    ((PASSED_TESTS++))
+    ((++PASSED_TESTS))
 }
 
 print_warning() {
     echo -e "${YELLOW}[WARN]${NC} $1"
-    ((WARNING_TESTS++))
+    ((++WARNING_TESTS))
 }
 
 print_error() {
     echo -e "${RED}[FAIL]${NC} $1"
-    ((FAILED_TESTS++))
+    ((++FAILED_TESTS))
 }
 
 print_header() {
@@ -112,7 +112,7 @@ test_url() {
     local expected_code="$2"
     local description="$3"
 
-    ((TOTAL_TESTS++))
+    ((++TOTAL_TESTS))
 
     if [[ "$VERBOSE" == true ]]; then
         print_status "Testing: $url"
@@ -145,7 +145,7 @@ test_url_direct() {
         return 0
     fi
 
-    ((TOTAL_TESTS++))
+    ((++TOTAL_TESTS))
 
     # Get server IP
     local server_ip
@@ -324,7 +324,7 @@ test_attack_patterns() {
 check_security_config() {
     print_header "Checking Security Configuration"
 
-    ((TOTAL_TESTS++))
+    ((++TOTAL_TESTS))
     if [[ -f "/etc/nginx/fastpanel2-includes/wordpress-security.conf" ]]; then
         print_success "Security configuration file exists"
     else
@@ -332,7 +332,7 @@ check_security_config() {
     fi
 
     # Check if vhosts include the security config
-    ((TOTAL_TESTS++))
+    ((++TOTAL_TESTS))
     local includes_found=0
     local vhost_array=()
 
@@ -342,7 +342,7 @@ check_security_config() {
 
     for vhost in "${vhost_array[@]}"; do
         if grep -q "fastpanel2-includes" "$vhost"; then
-            ((includes_found++))
+            ((++includes_found))
         fi
     done
 

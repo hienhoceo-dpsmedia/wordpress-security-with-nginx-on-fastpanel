@@ -84,7 +84,7 @@ remove_from_vhosts() {
             sed -i '/include \/etc\/nginx\/fastpanel2-includes\/\*\.conf;/d' "$vhost"
             # Also remove the comment line
             sed -i '/# load security includes early/d' "$vhost"
-            ((count++))
+            ((++count))
         fi
     done
 
@@ -149,7 +149,7 @@ verify_uninstall() {
 
     for vhost in "${vhost_array[@]}"; do
         if grep -q "fastpanel2-includes" "$vhost"; then
-            ((includes_found++))
+            ((++includes_found))
         fi
     done
 
