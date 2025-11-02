@@ -119,9 +119,11 @@ test_url() {
     fi
 
     local response_code
-    response_code=$(wget -q --server-response --timeout=10 --output-document=/dev/null \
-        --user-agent="WordPress-Security-Test/1.0" \
-        "https://$DOMAIN$url" 2>&1 | grep "HTTP/" | tail -1 | awk '{print $2}' || echo "000")
+    response_code=$(curl -sS -o /dev/null -w "%{http_code}" \
+        -A "WordPress-Security-Test/1.0" \
+        "https://$DOMAIN$url" 2>/dev/null || true)
+    response_code=${response_code//$'\r'/}
+    response_code=${response_code:-000}
 
     if [[ "$response_code" == "$expected_code" ]]; then
         print_success "$description - HTTP $response_code ✓"
@@ -166,10 +168,12 @@ test_url_direct() {
     fi
 
     local response_code
-    response_code=$(wget -q --server-response --timeout=10 --output-document=/dev/null \
-        --user-agent="WordPress-Security-Test/1.0" \
-        --header="Host: $DOMAIN" \
-        "https://$origin_host$url" 2>&1 | grep "HTTP/" | tail -1 | awk '{print $2}' || echo "000")
+    response_code=$(curl -sS -o /dev/null -w "%{http_code}" \
+        -A "WordPress-Security-Test/1.0" \
+        -H "Host: $DOMAIN" \
+        "https://$origin_host$url" 2>/dev/null || true)
+    response_code=${response_code//$'\r'/}
+    response_code=${response_code:-000}
 
     if [[ "$response_code" == "$expected_code" ]]; then
         print_success "$description (direct) - HTTP $response_code ✓"
