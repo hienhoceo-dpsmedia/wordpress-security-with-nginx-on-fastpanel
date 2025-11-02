@@ -168,10 +168,8 @@ update_vhosts() {
                 fi
             fi
 
-            # Remove backup if successful
-            if [[ $failed -eq 0 ]] || [[ ! -f "$backup_name" ]]; then
-                rm -f "$backup_name" 2>/dev/null
-            fi
+            # Remove backup if successful (only for this specific vhost)
+            rm -f "$backup_name" 2>/dev/null
         fi
 
         # Progress indicator
