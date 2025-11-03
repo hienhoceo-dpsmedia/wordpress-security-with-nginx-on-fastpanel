@@ -42,6 +42,17 @@ A step-by-step, copy-paste friendly guide that protects WordPress sites at the N
 | **Dangerous Scripts** | Blocks execution of `.cgi`, `.pl`, `.py`, `.sh` files |
 | **Fake Googlebot Crawlers** | Verifies Googlebot user agents against Google's published IP ranges |
 
+## ⚡ Quick Reference
+
+- Install everywhere:  
+  `wget -qO- https://raw.githubusercontent.com/hienhoceo-dpsmedia/wordpress-security-with-nginx-on-fastpanel/master/install-direct.sh | sudo bash`
+- Refresh Googlebot ranges manually:  
+  `sudo python3 /usr/local/share/wp-security/update-googlebot-map.py && sudo nginx -t && sudo systemctl reload nginx`
+- Run quick verification:  
+  `wget -qO- https://raw.githubusercontent.com/hienhoceo-dpsmedia/wordpress-security-with-nginx-on-fastpanel/master/scripts/quick-test.sh | bash -s your-domain.com`
+- Uninstall (removes all includes + cron):  
+  `curl -fsSL https://raw.githubusercontent.com/hienhoceo-dpsmedia/wordpress-security-with-nginx-on-fastpanel/master/scripts/uninstall.sh | sudo bash`
+
 ## 🚀 Quick Demo
 
 ```bash
@@ -173,6 +184,31 @@ sudo ./scripts/install.sh
 ```
 
 ## Detailed Installation Guide
+
+### 0 — Prepare Googlebot verification (manual installs only)
+
+If you are not using the automated installer, grab the helper script and seed the IP map once so the fake-Googlebot filter works:
+
+```bash
+sudo curl -fsSL -o /usr/local/share/wp-security/update-googlebot-map.py \
+  https://raw.githubusercontent.com/hienhoceo-dpsmedia/wordpress-security-with-nginx-on-fastpanel/master/scripts/update-googlebot-map.py
+sudo chmod +x /usr/local/share/wp-security/update-googlebot-map.py
+sudo python3 /usr/local/share/wp-security/update-googlebot-map.py
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+This generates:
+
+- `/etc/nginx/fastpanel2-includes/googlebot-verify-http.mapinc`
+- `/etc/nginx/fastpanel2-includes/googlebot-verified.map`
+
+Finally, open `/etc/nginx/nginx.conf` and inside the top-level `http { ... }` block ensure you have:
+
+```nginx
+    include /etc/nginx/fastpanel2-includes/googlebot-verify-http.mapinc;
+```
+
+Reloading Nginx after the commands above will pick up the include immediately.
 
 ### 1 — Create the Nginx security include file (one file for all sites)
 
@@ -398,6 +434,12 @@ Nightly automation logs to `/var/log/wp-security-nightly.log`. Adjust the schedu
 ```bash
 # Remove all security rules
 sudo ./scripts/uninstall.sh
+```
+
+Or grab the latest version straight from GitHub:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/hienhoceo-dpsmedia/wordpress-security-with-nginx-on-fastpanel/master/scripts/uninstall.sh | sudo bash
 ```
 
 The uninstall script:
