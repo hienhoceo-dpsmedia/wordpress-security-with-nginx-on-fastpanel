@@ -51,7 +51,11 @@ A step-by-step, copy-paste friendly guide that protects WordPress sites at the N
 - Run quick verification:  
   `wget -qO- https://raw.githubusercontent.com/hienhoceo-dpsmedia/wordpress-security-with-nginx-on-fastpanel/master/scripts/quick-test.sh | bash -s your-domain.com`
 - Uninstall (removes all includes + cron):  
-  `curl -fsSL https://raw.githubusercontent.com/hienhoceo-dpsmedia/wordpress-security-with-nginx-on-fastpanel/master/scripts/uninstall.sh | sudo bash`
+  ```bash
+  curl -fsSL -o /tmp/wpsec-uninstall.sh \
+    https://raw.githubusercontent.com/hienhoceo-dpsmedia/wordpress-security-with-nginx-on-fastpanel/master/scripts/uninstall.sh
+  sudo bash /tmp/wpsec-uninstall.sh
+  ```
 
 ## 🚀 Quick Demo
 
@@ -443,7 +447,9 @@ sudo ./scripts/uninstall.sh
 Or grab the latest version straight from GitHub:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/hienhoceo-dpsmedia/wordpress-security-with-nginx-on-fastpanel/master/scripts/uninstall.sh | sudo bash
+curl -fsSL -o /tmp/wpsec-uninstall.sh \
+  https://raw.githubusercontent.com/hienhoceo-dpsmedia/wordpress-security-with-nginx-on-fastpanel/master/scripts/uninstall.sh
+sudo bash /tmp/wpsec-uninstall.sh
 ```
 
 The uninstall script:

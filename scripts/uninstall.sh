@@ -16,6 +16,7 @@ NC='\033[0m' # No Color
 GOOGLE_MAP_PATH="/etc/nginx/fastpanel2-includes/googlebot-verified.map"
 GOOGLE_HTTP_INCLUDE="/etc/nginx/fastpanel2-includes/googlebot-verify-http.mapinc"
 GOOGLE_HTTP_BRIDGE="/etc/nginx/conf.d/wp-googlebot-verify.conf"
+NGINX_CONF_PATH="/etc/nginx/nginx.conf"
 
 # Function to print colored output
 print_status() {
@@ -121,6 +122,16 @@ remove_security_config() {
 
 remove_googlebot_protection() {
     print_status "Removing Googlebot verification assets..."
+
+    if [[ -f "$NGINX_CONF_PATH" ]] && grep -Fq "$GOOGLE_HTTP_INCLUDE" "$NGINX_CONF_PATH"; then
+        local nginx_backup="/root/backup-nginx.conf-before-uninstall-$(date +%F_%T).conf"
+        cp "$NGINX_CONF_PATH" "$nginx_backup"
+        if sed -i "\#${GOOGLE_HTTP_INCLUDE}#d" "$NGINX_CONF_PATH"; then
+            print_success "Removed Googlebot include from nginx.conf (backup: $nginx_backup)"
+        else
+            print_warning "Failed to update nginx.conf; restore from $nginx_backup if needed"
+        fi
+    fi
 
     if [[ -f "$GOOGLE_HTTP_INCLUDE" ]]; then
         rm "$GOOGLE_HTTP_INCLUDE"
