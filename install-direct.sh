@@ -107,6 +107,7 @@ setup_nightly_automation() {
     local nightly_dir="/usr/local/share/wp-security"
     local nightly_script="${nightly_dir}/update-vhosts-nightly.sh"
     local googlebot_script="${nightly_dir}/update-googlebot-map.py"
+    local nightly_lib_dir="${nightly_dir}/lib"
     local cron_entry="30 2 * * * ${automation_script} >> /var/log/wp-security-nightly.log 2>&1"
 
     mkdir -p "$nightly_dir"
@@ -126,6 +127,16 @@ setup_nightly_automation() {
         print_success "Googlebot map updater stored at $googlebot_script"
     else
         print_error "Failed to install Googlebot map updater script"
+        exit 1
+    fi
+
+    print_status "Installing shared helper library..."
+    mkdir -p "$nightly_lib_dir"
+    if fetch_file "$RAW_URL/scripts/lib/common.sh" "${nightly_lib_dir}/common.sh"; then
+        chmod 755 "${nightly_lib_dir}/common.sh"
+        print_success "Shared helpers stored at ${nightly_lib_dir}/common.sh"
+    else
+        print_error "Failed to install shared helper library"
         exit 1
     fi
 
@@ -158,7 +169,7 @@ install_security_config() {
 
     # Download the security configuration
     print_status "Downloading security configuration..."
-    if wget -qO /etc/nginx/fastpanel2-includes/wordpress-security.conf "$RAW_URL/nginx-includes/wordpress-security.conf"; then
+    if fetch_file "$RAW_URL/nginx-includes/wordpress-security.conf" "/etc/nginx/fastpanel2-includes/wordpress-security.conf"; then
         print_success "Security configuration downloaded successfully"
     else
         print_error "Failed to download security configuration"

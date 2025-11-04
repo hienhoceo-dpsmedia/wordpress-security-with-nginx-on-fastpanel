@@ -17,6 +17,8 @@ DOMAIN=""
 CREATE_FIXTURES=true
 DOCROOT=""
 TEMP_FILES=()
+STATE_DIR="/tmp/wpsec-fixtures"
+STATE_FILE=""
 
 CRITICAL_FILES=(
     "/wp-config.php"
@@ -103,6 +105,7 @@ print_header() {
 
 cleanup_fixtures() {
     if [[ ${#TEMP_FILES[@]} -eq 0 ]]; then
+        [[ -n "$STATE_FILE" && -f "$STATE_FILE" ]] && : > "$STATE_FILE"
         return
     fi
 
@@ -112,9 +115,32 @@ cleanup_fixtures() {
         fi
     done
     TEMP_FILES=()
+    if [[ -n "$STATE_FILE" ]]; then
+        : > "$STATE_FILE"
+    fi
 }
 
 trap cleanup_fixtures EXIT
+
+record_fixture() {
+    local path="$1"
+    TEMP_FILES+=("$path")
+    if [[ -n "$STATE_FILE" ]]; then
+        printf '%s\n' "$path" >> "$STATE_FILE"
+    fi
+}
+
+remove_stale_fixtures() {
+    if [[ -z "$STATE_FILE" || ! -f "$STATE_FILE" ]]; then
+        return
+    fi
+
+    while IFS= read -r leftover; do
+        [[ -n "$leftover" && -f "$leftover" ]] && rm -f "$leftover"
+    done < "$STATE_FILE"
+
+    : > "$STATE_FILE"
+}
 
 # Determine the document root for the given domain by inspecting FastPanel configs
 resolve_docroot() {
@@ -182,7 +208,7 @@ create_fixture() {
             ;;
     esac
 
-    TEMP_FILES+=("$full_path")
+    record_fixture "$full_path"
 }
 
 setup_fixtures() {
@@ -512,6 +538,13 @@ print_summary() {
 
 # Main function
 main() {
+    mkdir -p "$STATE_DIR"
+    local safe_domain
+    safe_domain=${DOMAIN//[^A-Za-z0-9._-]/_}
+    STATE_FILE="${STATE_DIR}/${safe_domain}.lst"
+    touch "$STATE_FILE"
+    remove_stale_fixtures
+
     print_status "WordPress Security Test for $DOMAIN"
     print_status "Started at $(date)"
     echo

@@ -6,12 +6,9 @@
 
 set -euo pipefail
 
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=../lib/common.sh
+. "${SCRIPT_DIR}/lib/common.sh"
 
 # Repository URLs
 RAW_BASE_URL="https://raw.githubusercontent.com/hienhoceo-dpsmedia/wordpress-security-with-nginx-on-fastpanel/master"
@@ -20,23 +17,6 @@ RAW_BASE_URL="https://raw.githubusercontent.com/hienhoceo-dpsmedia/wordpress-sec
 GOOGLE_MAP_PATH="/etc/nginx/fastpanel2-includes/googlebot-verified.map"
 GOOGLE_HTTP_INCLUDE="/etc/nginx/fastpanel2-includes/googlebot-verify-http.mapinc"
 GOOGLE_HTTP_BRIDGE="/etc/nginx/conf.d/wp-googlebot-verify.conf"
-
-# Function to print colored output
-print_status() {
-    echo -e "${BLUE}[INFO]${NC} $1"
-}
-
-print_success() {
-    echo -e "${GREEN}[SUCCESS]${NC} $1"
-}
-
-print_warning() {
-    echo -e "${YELLOW}[WARNING]${NC} $1"
-}
-
-print_error() {
-    echo -e "${RED}[ERROR]${NC} $1"
-}
 
 # Check if running as root
 check_root() {
@@ -83,9 +63,11 @@ setup_nightly_automation() {
     local nightly_googlebot_script="${nightly_dir}/update-googlebot-map.py"
     local cron_entry="30 2 * * * ${automation_script} >> /var/log/wp-security-nightly.log 2>&1"
     local repo_root
-    repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+    repo_root="$(cd "${SCRIPT_DIR}/.." && pwd)"
     local source_script="${repo_root}/scripts/update-vhosts-nightly.sh"
     local source_googlebot_script="${repo_root}/scripts/update-googlebot-map.py"
+    local source_common="${repo_root}/scripts/lib/common.sh"
+    local nightly_lib_dir="${nightly_dir}/lib"
 
     if [[ ! -f "$source_script" ]]; then
         print_error "Nightly updater script missing from repository: $source_script"
@@ -105,6 +87,11 @@ setup_nightly_automation() {
     cp "$source_googlebot_script" "$nightly_googlebot_script"
     chmod 755 "$nightly_googlebot_script"
     print_success "Googlebot map updater installed at $nightly_googlebot_script"
+
+    mkdir -p "$nightly_lib_dir"
+    cp "$source_common" "${nightly_lib_dir}/common.sh"
+    chmod 755 "${nightly_lib_dir}/common.sh"
+    print_success "Shared helpers installed at ${nightly_lib_dir}/common.sh"
 
     cat <<EOF > "$automation_script"
 #!/bin/bash
@@ -130,29 +117,11 @@ create_includes_dir() {
     print_success "Created /etc/nginx/fastpanel2-includes"
 }
 
-ensure_googlebot_http_include() {
-    local include_line="include $GOOGLE_HTTP_INCLUDE;"
-    mkdir -p /etc/nginx/conf.d
-
-    if [[ -f "$GOOGLE_HTTP_BRIDGE" ]] && grep -Fq "$include_line" "$GOOGLE_HTTP_BRIDGE"; then
-        print_status "Googlebot HTTP bridge already present at $GOOGLE_HTTP_BRIDGE"
-        return 0
-    fi
-
-    cat <<EOF > "$GOOGLE_HTTP_BRIDGE"
-# Managed by WordPress Security with Nginx on FastPanel
-# Ensures Googlebot verification variables are defined at http{} scope.
-$include_line
-EOF
-    chmod 644 "$GOOGLE_HTTP_BRIDGE"
-    print_success "Created Googlebot HTTP bridge at $GOOGLE_HTTP_BRIDGE"
-}
-
 install_googlebot_protection() {
     print_status "Installing Googlebot verification rules..."
 
     local repo_root
-    repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+    repo_root="$(cd "${SCRIPT_DIR}/.." && pwd)"
     local map_script="${repo_root}/scripts/update-googlebot-map.py"
 
     if [[ ! -f "$map_script" ]]; then
@@ -174,17 +143,16 @@ install_googlebot_protection() {
 install_security_config() {
     print_status "Installing WordPress security configuration..."
 
-    # Get script directory
-    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-    SECURITY_CONF="$SCRIPT_DIR/../nginx-includes/wordpress-security.conf"
+    local security_conf
+    security_conf="$(cd "${SCRIPT_DIR}/.." && pwd)/nginx-includes/wordpress-security.conf"
 
-    if [[ ! -f "$SECURITY_CONF" ]]; then
-        print_error "Security configuration file not found: $SECURITY_CONF"
+    if [[ ! -f "$security_conf" ]]; then
+        print_error "Security configuration file not found: $security_conf"
         exit 1
     fi
 
     # Copy the security configuration
-    cp "$SECURITY_CONF" /etc/nginx/fastpanel2-includes/wordpress-security.conf
+    cp "$security_conf" /etc/nginx/fastpanel2-includes/wordpress-security.conf
     chmod 644 /etc/nginx/fastpanel2-includes/wordpress-security.conf
 
     print_success "Security configuration installed"
@@ -221,17 +189,16 @@ update_vhosts() {
         print_status "Processing: $vhost"
 
         # Remove any existing include lines to avoid duplicates
-        sed -i '/include \/etc\/nginx\/fastpanel2-includes\/\*\.conf;/d' "$vhost"
-        sed -i '/# load security includes early/d' "$vhost"
+        wpsec_strip_security_include "$vhost"
 
-        # Insert the include after disable_symlinks line
-        if grep -q "disable_symlinks if_not_owner from=\$root_path;" "$vhost"; then
-            sed -i '/disable_symlinks if_not_owner from=\$root_path;/a\
-    # load security includes early\
-    include /etc/nginx/fastpanel2-includes/*.conf;' "$vhost"
+        # Insert the include after disable_symlinks line; fall back to listen 443 block when needed.
+        if wpsec_insert_security_include "$vhost"; then
             ((++count))
+        elif wpsec_insert_security_include_fallback "$vhost"; then
+            ((++count))
+            print_warning "Fallback include placement used for $vhost"
         else
-            print_warning "Could not find disable_symlinks directive in $vhost"
+            print_warning "Could not find suitable include placement in $vhost"
         fi
     done
 

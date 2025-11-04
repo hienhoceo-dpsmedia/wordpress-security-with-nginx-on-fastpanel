@@ -5,29 +5,6 @@
 
 set -Eeuo pipefail
 
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
-
-print_status() {
-    echo -e "${BLUE}[INFO]${NC} $1"
-}
-
-print_success() {
-    echo -e "${GREEN}[SUCCESS]${NC} $1"
-}
-
-print_warning() {
-    echo -e "${YELLOW}[WARNING]${NC} $1"
-}
-
-print_error() {
-    echo -e "${RED}[ERROR]${NC} $1"
-}
-
 FASTPANEL_DIR="/etc/nginx/fastpanel2-sites"
 INCLUDE_FILE="/etc/nginx/fastpanel2-includes/wordpress-security.conf"
 GOOGLE_MAP_PATH="/etc/nginx/fastpanel2-includes/googlebot-verified.map"
@@ -35,7 +12,82 @@ GOOGLE_HTTP_INCLUDE="/etc/nginx/fastpanel2-includes/googlebot-verify-http.mapinc
 GOOGLE_HTTP_BRIDGE="/etc/nginx/conf.d/wp-googlebot-verify.conf"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+LIB_COMMON="${SCRIPT_DIR}/lib/common.sh"
 GOOGLEBOT_UPDATE_SCRIPT="${SCRIPT_DIR}/update-googlebot-map.py"
+
+if [[ -f "$LIB_COMMON" ]]; then
+    # shellcheck source=lib/common.sh
+    . "$LIB_COMMON"
+else
+    RED='\033[0;31m'
+    GREEN='\033[0;32m'
+    YELLOW='\033[1;33m'
+    BLUE='\033[0;34m'
+    NC='\033[0m'
+
+    print_status() {
+        echo -e "${BLUE}[INFO]${NC} $1"
+    }
+
+    print_success() {
+        echo -e "${GREEN}[SUCCESS]${NC} $1"
+    }
+
+    print_warning() {
+        echo -e "${YELLOW}[WARNING]${NC} $1"
+    }
+
+    print_error() {
+        echo -e "${RED}[ERROR]${NC} $1"
+    }
+
+    ensure_googlebot_http_include() {
+        local include_line="include $GOOGLE_HTTP_INCLUDE;"
+        mkdir -p /etc/nginx/conf.d
+        if [[ -f "$GOOGLE_HTTP_BRIDGE" ]] && grep -Fq "$include_line" "$GOOGLE_HTTP_BRIDGE"; then
+            return 0
+        fi
+        cat <<EOF > "$GOOGLE_HTTP_BRIDGE"
+# Managed by WordPress Security with Nginx on FastPanel
+# Ensures Googlebot verification variables are defined at http{} scope.
+$include_line
+EOF
+        chmod 644 "$GOOGLE_HTTP_BRIDGE"
+    }
+
+    wpsec_strip_security_include() {
+        local vhost="$1"
+        sed -i '/include \/etc\/nginx\/fastpanel2-includes\/\*\.conf;/d' "$vhost"
+        sed -i '/# load security includes early/d' "$vhost"
+    }
+
+    wpsec_vhost_has_security_include() {
+        local vhost="$1"
+        grep -q 'include /etc/nginx/fastpanel2-includes/\*.conf;' "$vhost"
+    }
+
+    wpsec_insert_security_include() {
+        local vhost="$1"
+        if grep -q 'disable_symlinks if_not_owner from=\$root_path;' "$vhost"; then
+            sed -i '/disable_symlinks if_not_owner from=\$root_path;/a\
+    # load security includes early\
+    include /etc/nginx/fastpanel2-includes/*.conf;' "$vhost"
+            return 0
+        fi
+        return 1
+    }
+
+    wpsec_insert_security_include_fallback() {
+        local vhost="$1"
+        if grep -q 'listen.*443' "$vhost"; then
+            sed -i '/listen.*443/a\
+    # load security includes early\
+    include /etc/nginx/fastpanel2-includes/*.conf;' "$vhost"
+            return 0
+        fi
+        return 1
+    }
+fi
 
 check_root() {
     if [[ $EUID -ne 0 ]]; then
@@ -63,17 +115,8 @@ refresh_googlebot_map() {
         return
     fi
 
-    local include_line="include $GOOGLE_HTTP_INCLUDE;"
-    mkdir -p /etc/nginx/conf.d
-    if [[ ! -f "$GOOGLE_HTTP_BRIDGE" ]] || ! grep -Fq "$include_line" "$GOOGLE_HTTP_BRIDGE"; then
-        cat <<EOF > "$GOOGLE_HTTP_BRIDGE"
-# Managed by WordPress Security with Nginx on FastPanel
-# Ensures Googlebot verification variables are defined at http{} scope.
-$include_line
-EOF
-        chmod 644 "$GOOGLE_HTTP_BRIDGE"
-        print_success "Googlebot HTTP bridge refreshed at $GOOGLE_HTTP_BRIDGE"
-    fi
+    ensure_googlebot_http_include
+    print_success "Googlebot HTTP bridge ensured at $GOOGLE_HTTP_BRIDGE"
 
     if python3 "$GOOGLEBOT_UPDATE_SCRIPT" --quiet --map-path "$GOOGLE_MAP_PATH" --http-include-path "$GOOGLE_HTTP_INCLUDE"; then
         print_success "Googlebot CIDR map refreshed"
@@ -93,7 +136,8 @@ create_backup() {
 refresh_vhosts() {
     local vhost_files=()
     local updated=0
-    local skipped=0
+    local skipped_already=0
+    local skipped_missing=0
 
     while IFS= read -r -d '' file; do
         vhost_files+=("$file")
@@ -105,25 +149,31 @@ refresh_vhosts() {
     fi
 
     for vhost in "${vhost_files[@]}"; do
-        print_status "Processing: $(basename "$vhost")"
+        if wpsec_vhost_has_security_include "$vhost"; then
+            ((skipped_already++))
+            continue
+        fi
 
-        sed -i '/include \/etc\/nginx\/fastpanel2-includes\/\*\.conf;/d' "$vhost"
-        sed -i '/# load security includes early/d' "$vhost"
+        print_status "Adding security include to: $(basename "$vhost")"
+        wpsec_strip_security_include "$vhost"
 
-        if grep -q "disable_symlinks if_not_owner from=\$root_path;" "$vhost"; then
-            sed -i '/disable_symlinks if_not_owner from=\$root_path;/a\
-    # load security includes early\
-    include /etc/nginx/fastpanel2-includes/*.conf;' "$vhost"
+        if wpsec_insert_security_include "$vhost"; then
+            ((updated++))
+        elif wpsec_insert_security_include_fallback "$vhost"; then
+            print_warning "Fallback include placement used for $(basename "$vhost")"
             ((updated++))
         else
             print_warning "disable_symlinks directive not found in $(basename "$vhost"); skipping automatic insert"
-            ((skipped++))
+            ((skipped_missing++))
         fi
     done
 
     print_success "Updated ${updated} vhost configuration(s)"
-    if [[ $skipped -gt 0 ]]; then
-        print_warning "${skipped} vhost(s) require manual review to add the include"
+    if [[ $skipped_already -gt 0 ]]; then
+        print_status "${skipped_already} vhost(s) already contained the security include"
+    fi
+    if [[ $skipped_missing -gt 0 ]]; then
+        print_warning "${skipped_missing} vhost(s) require manual review to add the include"
     fi
 }
 
