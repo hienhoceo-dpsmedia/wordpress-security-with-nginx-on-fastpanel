@@ -363,16 +363,17 @@ test_url_direct() {
         print_status "Testing direct to IP ($server_ip): $url"
     fi
 
-    local origin_host="$server_ip"
+    local resolve_addr="$server_ip"
     if [[ "$server_ip" == *:* ]]; then
-        origin_host="[$server_ip]"
+        resolve_addr="[$server_ip]"
     fi
 
     local response_code
     response_code=$(curl -sS -o /dev/null -w "%{http_code}" \
         -A "WordPress-Security-Test/1.0" \
+        --resolve "$DOMAIN:443:$resolve_addr" \
         -H "Host: $DOMAIN" \
-        "https://$origin_host$url" 2>/dev/null || true)
+        "https://$DOMAIN$url" 2>/dev/null || true)
     response_code=${response_code//$'\r'/}
     response_code=${response_code:-000}
 
