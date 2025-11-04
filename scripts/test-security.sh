@@ -501,10 +501,10 @@ test_attack_patterns() {
     print_header "Testing Attack Patterns in Query Strings"
 
     local patterns=(
-        "/?eval(base64_decode('test'))"
+        "/?eval(base64_decode(%27test%27))"
         "/?GLOBALS[_POST]=test"
-        "/?<script>alert('xss')</script>"
-        "/?id=1'+DROP+TABLE+users--"
+        "/?%3Cscript%3Ealert(%27xss%27)%3C/script%3E"
+        "/?id=1%27+DROP+TABLE+users--"
         "/?file=../../../../etc/passwd"
         "/?q=javascript:alert(1);"
     )
