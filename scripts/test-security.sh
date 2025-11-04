@@ -25,7 +25,6 @@ CRITICAL_FILES=(
     "/wp-config-sample.php"
     "/xmlrpc.php"
     "/wp-admin/install.php"
-    "/wp-admin/upgrade.php"
     "/wp-content/debug.log"
     "/readme.html"
     "/license.txt"
@@ -449,6 +448,8 @@ test_normal_functionality() {
     test_url "/wp-login.php" "200" "WP Login should be accessible"
     test_url "/wp-content/themes/twentytwentyfour/style.css" "200" "Theme CSS should be accessible"
     test_url "/wp-includes/js/jquery/jquery.min.js" "200" "WordPress JS should be accessible"
+    test_url "/wp-admin/upgrade.php" "200" "WP upgrade script should be accessible"
+    test_url_direct "/wp-admin/upgrade.php" "200" "WP upgrade script should be accessible"
 
     # Test multisite exception
     test_url "/wp-includes/ms-files.php" "200" "Multisite files should be accessible (if exists)"
