@@ -37,22 +37,21 @@ print_header() {
 
 # Ensure the Googlebot http{} bridge file exists with the include line.
 ensure_googlebot_http_include() {
-    local include_line
-    include_line="include $GOOGLE_HTTP_INCLUDE;"
+    local bridge_contents="# Managed by WordPress Security with Nginx on FastPanel
+# Ensures security maps are defined at http{} scope.
+include $GOOGLE_HTTP_INCLUDE;
+include $SECURITY_HTTP_MAP;
+"
     mkdir -p /etc/nginx/conf.d
 
-    if [[ -f "$GOOGLE_HTTP_BRIDGE" ]] && grep -Fq "$include_line" "$GOOGLE_HTTP_BRIDGE"; then
-        print_status "Googlebot HTTP bridge already present at $GOOGLE_HTTP_BRIDGE"
+    if [[ -f "$GOOGLE_HTTP_BRIDGE" ]] && cmp -s <(printf "%s" "$bridge_contents") "$GOOGLE_HTTP_BRIDGE"; then
+        print_status "HTTP bridge already up to date at $GOOGLE_HTTP_BRIDGE"
         return 0
     fi
 
-    cat <<EOF > "$GOOGLE_HTTP_BRIDGE"
-# Managed by WordPress Security with Nginx on FastPanel
-# Ensures Googlebot verification variables are defined at http{} scope.
-$include_line
-EOF
+    printf "%s" "$bridge_contents" > "$GOOGLE_HTTP_BRIDGE"
     chmod 644 "$GOOGLE_HTTP_BRIDGE"
-    print_success "Created Googlebot HTTP bridge at $GOOGLE_HTTP_BRIDGE"
+    print_success "Updated HTTP bridge at $GOOGLE_HTTP_BRIDGE"
 }
 
 wpsec_strip_security_include() {

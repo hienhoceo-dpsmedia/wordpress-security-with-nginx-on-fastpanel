@@ -9,6 +9,7 @@ FASTPANEL_DIR="/etc/nginx/fastpanel2-sites"
 INCLUDE_FILE="/etc/nginx/fastpanel2-includes/wordpress-security.conf"
 GOOGLE_MAP_PATH="/etc/nginx/fastpanel2-includes/googlebot-verified.map"
 GOOGLE_HTTP_INCLUDE="/etc/nginx/fastpanel2-includes/googlebot-verify-http.mapinc"
+SECURITY_HTTP_MAP="/etc/nginx/fastpanel2-includes/wordpress-security-http.mapinc"
 GOOGLE_HTTP_BRIDGE="/etc/nginx/conf.d/wp-googlebot-verify.conf"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -42,16 +43,16 @@ else
     }
 
     ensure_googlebot_http_include() {
-        local include_line="include $GOOGLE_HTTP_INCLUDE;"
+        local bridge_contents="# Managed by WordPress Security with Nginx on FastPanel
+# Ensures security maps are defined at http{} scope.
+include $GOOGLE_HTTP_INCLUDE;
+include $SECURITY_HTTP_MAP;
+"
         mkdir -p /etc/nginx/conf.d
-        if [[ -f "$GOOGLE_HTTP_BRIDGE" ]] && grep -Fq "$include_line" "$GOOGLE_HTTP_BRIDGE"; then
+        if [[ -f "$GOOGLE_HTTP_BRIDGE" ]] && cmp -s <(printf "%s" "$bridge_contents") "$GOOGLE_HTTP_BRIDGE"; then
             return 0
         fi
-        cat <<EOF > "$GOOGLE_HTTP_BRIDGE"
-# Managed by WordPress Security with Nginx on FastPanel
-# Ensures Googlebot verification variables are defined at http{} scope.
-$include_line
-EOF
+        printf "%s" "$bridge_contents" > "$GOOGLE_HTTP_BRIDGE"
         chmod 644 "$GOOGLE_HTTP_BRIDGE"
     }
 
@@ -105,6 +106,12 @@ ensure_prerequisites() {
     if [[ ! -f "$INCLUDE_FILE" ]]; then
         print_error "Security include missing: $INCLUDE_FILE"
         print_status "Re-run the main installer to recreate it."
+        exit 1
+    fi
+
+    if [[ ! -f "$SECURITY_HTTP_MAP" ]]; then
+        print_error "Security HTTP map missing: $SECURITY_HTTP_MAP"
+        print_status "Re-run the installer to refresh the map definitions."
         exit 1
     fi
 }

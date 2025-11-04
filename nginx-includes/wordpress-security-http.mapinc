@@ -1,0 +1,49 @@
+# WordPress Security HTTP-scope maps
+# Loaded in http{} to expose pattern variables for server-level rules.
+
+map default $ng_reason {
+    default '';
+}
+
+map $request_method $wp_blocked_method {
+    default 0;
+    "~*^(connect|move|trace|track|debug)$" 1;
+}
+
+map $http_cookie $wp_bad_cookie {
+    default 0;
+    "~*<|>|%0[ad]|%00|\\x00" 1;
+}
+
+map $http_referer $wp_bad_referer {
+    default 0;
+    "~*semalt\\.com|best-seo|todaperfeita|cocaine|viagra|xanax" 1;
+}
+
+map $query_string $wp_bad_query {
+    default 0;
+    "~*\\.\\./.*\\.\\./" 1;
+    "~*(?:union.*select|base64_(?:en|de)code|benchmark\\()" 2;
+    "~*(?:cmd|command)\\s*=" 3;
+    "~*etc/passwd|boot\\.ini|self/environ" 4;
+    "~*eval\\(|javascript:" 5;
+    "~*GLOBALS\\[|_REQUEST\\[" 6;
+}
+
+map $uri $wp_bad_uri {
+    default 0;
+    "~*\\.\\./" 1;
+    "~*/(?:adminer|phpmyadmin|mysqladmin)\\.php" 2;
+    "~*/(?:c99|php|web)shell" 3;
+    "~*/(?:timthumb|thumb|thumbs?)(?:\\.|%2e)php" 4;
+    "~*/(?:wp-content/uploads|backup|db|sql).*(?:\\.zip|\\.tar|\\.gz|\\.sql)" 5;
+    "~*/\\.git" 6;
+    "~*/\\.ht(?:access|passwd)" 7;
+}
+
+map $http_user_agent $wp_bad_bot {
+    default 0;
+    "~*curl|libwww-perl|python-urllib|wget|sqlmap|nmap" 1;
+    "~*mj12bot|semrush|petalbot|bytespider|masscan|httpprobe" 2;
+    "~*dotbot|ahrefs|yisouspider|megaindex|crawlergo|scrapy" 3;
+}

@@ -643,6 +643,7 @@ WordPress-Security-with-Nginx-on-FastPanel/
 ├── install-direct.sh                  # 🛠️ Direct installation script (recommended)
 ├── setup-alternative.sh               # 🔧 Alternative setup methods
 ├── nginx-includes/
+│   ├── wordpress-security-http.mapinc # HTTP-scope maps (methods, query, bots)
 │   └── wordpress-security.conf        # Main security configuration
 └── scripts/
     ├── install.sh                     # Automated installation script

@@ -87,6 +87,22 @@ CURRENT_USER_AGENT=""
 EXTRA_CURL_ARGS=()
 EXTRA_CURL_HEADERS=()
 FAKE_GOOGLEBOT_UA="Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)"
+SAVED_USER_AGENT=""
+SAVED_CURL_ARGS=()
+SAVED_CURL_HEADERS=()
+
+save_curl_context() {
+    SAVED_USER_AGENT="$CURRENT_USER_AGENT"
+    SAVED_CURL_ARGS=("${EXTRA_CURL_ARGS[@]}")
+    SAVED_CURL_HEADERS=("${EXTRA_CURL_HEADERS[@]}")
+}
+
+restore_curl_context() {
+    CURRENT_USER_AGENT="$SAVED_USER_AGENT"
+    EXTRA_CURL_ARGS=("${SAVED_CURL_ARGS[@]}")
+    EXTRA_CURL_HEADERS=("${SAVED_CURL_HEADERS[@]}")
+    ALLOW_CONNECTION_DROP=false
+}
 
 # Function to print colored output
 print_status() {
@@ -585,6 +601,52 @@ test_attack_patterns() {
     done
 }
 
+# Test additional validation rules from HTTP-scope maps
+test_request_validations() {
+    print_header "Testing Request Validation Rules"
+
+    save_curl_context
+    EXTRA_CURL_ARGS=(-X TRACE)
+    test_url "/" "405" "TRACE method should be blocked"
+    restore_curl_context
+
+    test_url "/?cmd=ls" "403" "Suspicious query string should be blocked"
+    if [[ "$SKIP_CDN" != true ]]; then
+        test_url_direct "/?cmd=ls" "403" "Suspicious query string should be blocked"
+    fi
+
+    test_url "/wp-content/uploads/malicious.zip" "403" "Sensitive archive path should be blocked"
+    if [[ "$SKIP_CDN" != true ]]; then
+        test_url_direct "/wp-content/uploads/malicious.zip" "403" "Sensitive archive path should be blocked"
+    fi
+
+    save_curl_context
+    EXTRA_CURL_HEADERS=(-H "Cookie: wpsec=<script>")
+    test_url "/" "403" "Malicious cookie should be blocked"
+    if [[ "$SKIP_CDN" != true ]]; then
+        test_url_direct "/" "403" "Malicious cookie should be blocked"
+    fi
+    restore_curl_context
+
+    save_curl_context
+    EXTRA_CURL_HEADERS=(-H "Referer: http://semalt.com/")
+    test_url "/" "403" "Spam referer should be blocked"
+    if [[ "$SKIP_CDN" != true ]]; then
+        test_url_direct "/" "403" "Spam referer should be blocked"
+    fi
+    restore_curl_context
+
+    save_curl_context
+    CURRENT_USER_AGENT="sqlmap/1.5"
+    ALLOW_CONNECTION_DROP=true
+    test_url "/" "403" "Known malicious bot UA should be blocked"
+    if [[ "$SKIP_CDN" != true ]]; then
+        ALLOW_CONNECTION_DROP=true
+        test_url_direct "/" "403" "Known malicious bot UA should be blocked"
+    fi
+    restore_curl_context
+}
+
 test_fake_googlebot() {
     print_header "Testing Fake Googlebot Protection (Should Return 403)"
 
@@ -698,6 +760,7 @@ main() {
     test_dangerous_scripts
     test_exploit_files
     test_attack_patterns
+    test_request_validations
     test_fake_googlebot
     test_normal_functionality
 

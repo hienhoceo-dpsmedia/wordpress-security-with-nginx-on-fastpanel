@@ -16,6 +16,7 @@ RAW_BASE_URL="https://raw.githubusercontent.com/hienhoceo-dpsmedia/wordpress-sec
 # Googlebot verification paths
 GOOGLE_MAP_PATH="/etc/nginx/fastpanel2-includes/googlebot-verified.map"
 GOOGLE_HTTP_INCLUDE="/etc/nginx/fastpanel2-includes/googlebot-verify-http.mapinc"
+SECURITY_HTTP_MAP="/etc/nginx/fastpanel2-includes/wordpress-security-http.mapinc"
 GOOGLE_HTTP_BRIDGE="/etc/nginx/conf.d/wp-googlebot-verify.conf"
 
 # Check if running as root
@@ -143,17 +144,26 @@ install_googlebot_protection() {
 install_security_config() {
     print_status "Installing WordPress security configuration..."
 
-    local security_conf
-    security_conf="$(cd "${SCRIPT_DIR}/.." && pwd)/nginx-includes/wordpress-security.conf"
+    local repo_root
+    repo_root="$(cd "${SCRIPT_DIR}/.." && pwd)"
+    local security_conf="${repo_root}/nginx-includes/wordpress-security.conf"
+    local security_http_map="${repo_root}/nginx-includes/wordpress-security-http.mapinc"
 
     if [[ ! -f "$security_conf" ]]; then
         print_error "Security configuration file not found: $security_conf"
         exit 1
     fi
 
+    if [[ ! -f "$security_http_map" ]]; then
+        print_error "Security HTTP map file not found: $security_http_map"
+        exit 1
+    fi
+
     # Copy the security configuration
     cp "$security_conf" /etc/nginx/fastpanel2-includes/wordpress-security.conf
+    cp "$security_http_map" "$SECURITY_HTTP_MAP"
     chmod 644 /etc/nginx/fastpanel2-includes/wordpress-security.conf
+    chmod 644 "$SECURITY_HTTP_MAP"
 
     print_success "Security configuration installed"
 }

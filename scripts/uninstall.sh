@@ -17,6 +17,7 @@ NC='\033[0m' # No Color
 
 GOOGLE_MAP_PATH="/etc/nginx/fastpanel2-includes/googlebot-verified.map"
 GOOGLE_HTTP_INCLUDE="/etc/nginx/fastpanel2-includes/googlebot-verify-http.mapinc"
+SECURITY_HTTP_MAP="/etc/nginx/fastpanel2-includes/wordpress-security-http.mapinc"
 GOOGLE_HTTP_BRIDGE="/etc/nginx/conf.d/wp-googlebot-verify.conf"
 NGINX_CONF_PATH="/etc/nginx/nginx.conf"
 
@@ -96,6 +97,10 @@ backup_before_uninstall() {
         cp "$GOOGLE_HTTP_INCLUDE" "$BACKUP_DIR/"
     fi
 
+    if [[ -f "$SECURITY_HTTP_MAP" ]]; then
+        cp "$SECURITY_HTTP_MAP" "$BACKUP_DIR/"
+    fi
+
     if [[ -f "$GOOGLE_MAP_PATH" ]]; then
         cp "$GOOGLE_MAP_PATH" "$BACKUP_DIR/"
     fi
@@ -146,6 +151,13 @@ remove_security_config() {
         print_success "Removed security configuration file"
     else
         print_warning "Security configuration file not found"
+    fi
+
+    if [[ -f "$SECURITY_HTTP_MAP" ]]; then
+        rm "$SECURITY_HTTP_MAP"
+        print_success "Removed security HTTP map"
+    else
+        print_warning "Security HTTP map not found"
     fi
 }
 

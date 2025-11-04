@@ -17,6 +17,7 @@ NC='\033[0m' # No Color
 
 GOOGLE_MAP_PATH="/etc/nginx/fastpanel2-includes/googlebot-verified.map"
 GOOGLE_HTTP_INCLUDE="/etc/nginx/fastpanel2-includes/googlebot-verify-http.mapinc"
+SECURITY_HTTP_MAP="/etc/nginx/fastpanel2-includes/wordpress-security-http.mapinc"
 GOOGLE_HTTP_BRIDGE="/etc/nginx/conf.d/wp-googlebot-verify.conf"
 
 # Function to print colored output
@@ -176,27 +177,38 @@ install_security_config() {
         exit 1
     fi
 
+    print_status "Downloading HTTP-scope security map..."
+    if fetch_file "$RAW_URL/nginx-includes/wordpress-security-http.mapinc" "$SECURITY_HTTP_MAP"; then
+        print_success "HTTP security map downloaded successfully"
+    else
+        print_error "Failed to download HTTP security map"
+        exit 1
+    fi
+
     # Set proper permissions
     chmod 644 /etc/nginx/fastpanel2-includes/wordpress-security.conf
+    chmod 644 "$SECURITY_HTTP_MAP"
     print_success "Set permissions on security configuration"
 }
 
 ensure_googlebot_http_include() {
-    local include_line="include $GOOGLE_HTTP_INCLUDE;"
     mkdir -p /etc/nginx/conf.d
 
-    if [[ -f "$GOOGLE_HTTP_BRIDGE" ]] && grep -Fq "$include_line" "$GOOGLE_HTTP_BRIDGE"; then
-        print_status "Googlebot HTTP bridge already present at $GOOGLE_HTTP_BRIDGE"
+    local bridge_contents="# Managed by WordPress Security with Nginx on FastPanel
+# Ensures security maps are defined at http{} scope.
+include $GOOGLE_HTTP_INCLUDE;
+include $SECURITY_HTTP_MAP;
+"
+
+    if [[ -f "$GOOGLE_HTTP_BRIDGE" ]] && cmp -s <(printf "%s" "$bridge_contents") "$GOOGLE_HTTP_BRIDGE"; then
+        print_status "HTTP bridge already up to date at $GOOGLE_HTTP_BRIDGE"
         return 0
     fi
 
-    cat <<EOF > "$GOOGLE_HTTP_BRIDGE"
-# Managed by WordPress Security with Nginx on FastPanel
-# Ensures Googlebot verification variables are defined at http{} scope.
-$include_line
-EOF
+    printf "%s" "$bridge_contents" > "$GOOGLE_HTTP_BRIDGE"
+    mkdir -p /etc/nginx/conf.d
     chmod 644 "$GOOGLE_HTTP_BRIDGE"
-    print_success "Created Googlebot HTTP bridge at $GOOGLE_HTTP_BRIDGE"
+    print_success "Updated HTTP bridge at $GOOGLE_HTTP_BRIDGE"
 }
 
 install_googlebot_protection() {
