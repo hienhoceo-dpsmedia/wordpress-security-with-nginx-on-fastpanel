@@ -157,7 +157,7 @@ Alongside the location-based blocks, the installer now ships an HTTP-scope inclu
 - **Cookie / referer sanity checks** – strips obvious header injection attempts and SEO spam referers.
 - **Query string heuristics** – drops requests carrying traversal (`../`), SQLi (`union select`), LFI (`etc/passwd`), or `eval()` payloads.
 - **URI fingerprints** – denies direct hits on well-known shells, admin tools, backup archives, and hidden folders.
-- **Abusive user agents** – blocks scanners such as `sqlmap`, `curl`, `python-urllib`, `Bytespider`, `MJ12bot`, `Ahrefs`, etc.
+- **Abusive user agents** – blocks scanners such as `sqlmap`, `curl`, `python-urllib`, `go-http-client`, `Bytespider`, `MJ12bot`, `Ahrefs`, etc.
 
 Every rule appends a hint to `$ng_reason`, so if you extend your `log_format` (recommended) you immediately see why a request was rejected:
 

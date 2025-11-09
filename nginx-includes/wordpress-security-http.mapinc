@@ -43,7 +43,7 @@ map $uri $wp_bad_uri {
 
 map $http_user_agent $wp_bad_bot {
     default 0;
-    "~*curl|libwww-perl|python-urllib|wget|sqlmap|nmap" 1;
+    "~*curl|libwww-perl|python-urllib|wget|sqlmap|nmap|go-http-client" 1;
     "~*mj12bot|semrush|petalbot|bytespider|masscan|httpprobe" 2;
     "~*dotbot|ahrefs|yisouspider|megaindex|crawlergo|scrapy" 3;
 }
