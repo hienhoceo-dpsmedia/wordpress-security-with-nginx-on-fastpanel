@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-Fetch the official Googlebot IP ranges and render them as an nginx map include.
+Fetch the official Google crawler IP ranges and render them as an nginx map include.
 
 This script powers the Googlebot spoofing protection that ships with the
 WordPress Security with Nginx on FastPanel project.
@@ -21,7 +21,12 @@ import urllib.error
 import urllib.request
 from typing import Iterable, List
 
-DEFAULT_DATA_URL = "https://developers.google.com/search/apis/ipranges/googlebot.json"
+DEFAULT_DATA_URLS = (
+    "https://developers.google.com/search/apis/ipranges/googlebot.json",
+    "https://developers.google.com/static/search/apis/ipranges/special-crawlers.json",
+    "https://developers.google.com/static/search/apis/ipranges/user-triggered-fetchers-google.json",
+    "https://developers.google.com/static/search/apis/ipranges/user-triggered-fetchers.json",
+)
 DEFAULT_MAP_PATH = "/etc/nginx/fastpanel2-includes/googlebot-verified.map"
 DEFAULT_HTTP_INCLUDE_PATH = "/etc/nginx/fastpanel2-includes/googlebot-verify-http.mapinc"
 
@@ -46,8 +51,8 @@ def fetch_json(url: str) -> dict:
         raise GooglebotMapError(f"Invalid JSON from {url}: {exc}") from exc
 
 
-def build_prefix_list(data: dict) -> List[str]:
-    """Extract IPv4 and IPv6 prefixes from the Google payload."""
+def extract_prefixes(data: dict) -> List[str]:
+    """Extract raw IPv4 and IPv6 prefixes from a Google crawler payload."""
     prefixes = data.get("prefixes")
     if not isinstance(prefixes, list):
         raise GooglebotMapError("JSON payload missing 'prefixes' array")
@@ -63,13 +68,30 @@ def build_prefix_list(data: dict) -> List[str]:
         if ipv6:
             result.append(str(ipv6))
 
-    if not result:
-        raise GooglebotMapError("No Googlebot prefixes discovered in payload")
+    return result
 
-    # Always render IPv4 before IPv6 for readability.
-    ipv4_sorted = sorted([p for p in result if ":" not in p])
-    ipv6_sorted = sorted([p for p in result if ":" in p])
-    return ipv4_sorted + ipv6_sorted
+
+def dedupe_and_sort_prefixes(prefixes: Iterable[str]) -> List[str]:
+    """Remove duplicates while ensuring IPv4 blocks appear before IPv6."""
+    seen = set()
+    ipv4: List[str] = []
+    ipv6: List[str] = []
+
+    for prefix in prefixes:
+        if prefix in seen:
+            continue
+        seen.add(prefix)
+        if ":" in prefix:
+            ipv6.append(prefix)
+        else:
+            ipv4.append(prefix)
+
+    ipv4_sorted = sorted(ipv4)
+    ipv6_sorted = sorted(ipv6)
+    combined = ipv4_sorted + ipv6_sorted
+    if not combined:
+        raise GooglebotMapError("No Google crawler prefixes discovered across all sources")
+    return combined
 
 
 def write_file_atomic(path: pathlib.Path, lines: Iterable[str]) -> None:
@@ -92,16 +114,13 @@ def write_file_atomic(path: pathlib.Path, lines: Iterable[str]) -> None:
                 pathlib.Path(tmp_path).unlink()
 
 
-def render_map_file(prefixes: Iterable[str]) -> List[str]:
+def render_map_file(prefixes: Iterable[str], data_urls: Iterable[str]) -> List[str]:
     timestamp = _dt.datetime.now(_dt.timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
-    header = textwrap.dedent(
-        f"""\
-        # Auto-generated Googlebot CIDR map
-        # Source: {DEFAULT_DATA_URL}
-        # Generated: {timestamp}
-        """
-    )
-    lines = [header]
+    header_lines = ["# Auto-generated Google crawler CIDR map"]
+    header_lines.extend(f"# Source: {url}" for url in data_urls)
+    header_lines.append(f"# Generated: {timestamp}")
+    header_lines.append("")
+    lines = ["\n".join(header_lines)]
     for prefix in prefixes:
         lines.append(f"{prefix} 1;\n")
     return lines
@@ -142,8 +161,13 @@ def parse_args(argv: Iterable[str]) -> argparse.Namespace:
     )
     parser.add_argument(
         "--data-url",
-        default=DEFAULT_DATA_URL,
-        help="JSON endpoint for Googlebot IP ranges (default: %(default)s)",
+        dest="data_urls",
+        action="append",
+        metavar="URL",
+        help=(
+            "JSON endpoint for Google crawler IP ranges. "
+            "Specify multiple times to override the default source list."
+        ),
     )
     parser.add_argument(
         "--map-path",
@@ -168,10 +192,19 @@ def main(argv: Iterable[str]) -> int:
     map_path = pathlib.Path(args.map_path)
     http_include_path = pathlib.Path(args.http_include_path)
 
-    data = fetch_json(args.data_url)
-    prefixes = build_prefix_list(data)
+    data_urls = args.data_urls or list(DEFAULT_DATA_URLS)
 
-    write_file_atomic(map_path, render_map_file(prefixes))
+    combined_prefixes: List[str] = []
+    for data_url in data_urls:
+        data = fetch_json(data_url)
+        prefixes = extract_prefixes(data)
+        if not prefixes:
+            raise GooglebotMapError(f"No prefixes discovered in payload from {data_url}")
+        combined_prefixes.extend(prefixes)
+
+    prefixes = dedupe_and_sort_prefixes(combined_prefixes)
+
+    write_file_atomic(map_path, render_map_file(prefixes, data_urls))
     write_file_atomic(http_include_path, render_http_include(map_path))
 
     if not args.quiet:

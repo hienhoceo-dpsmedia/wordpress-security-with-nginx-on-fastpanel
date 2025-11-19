@@ -114,7 +114,11 @@ We use Nginx location rules to deny access to those things at the webserver leve
 Bad actors often spoof the `Googlebot` user agent to bypass allowlists or rate limits.  
 The installer now validates every Googlebot request by combining two signals:
 
-- A managed `map` of official Googlebot IPv4/IPv6 ranges fetched from Google's public JSON endpoint.
+- A managed `map` of official Google crawler IPv4/IPv6 ranges fetched from Google's public JSON endpoints:
+  - https://developers.google.com/search/apis/ipranges/googlebot.json
+  - https://developers.google.com/static/search/apis/ipranges/special-crawlers.json
+  - https://developers.google.com/static/search/apis/ipranges/user-triggered-fetchers-google.json
+  - https://developers.google.com/static/search/apis/ipranges/user-triggered-fetchers.json
 - A curated list of Googlebot user agents (Search, AdsBot, InspectionTool, etc.).
 
 If the user agent claims to be Googlebot but the source IP is not in Google's published ranges, the request is blocked immediately with **HTTP 403**.  
